@@ -3,12 +3,8 @@ import * as sqlAndTsTypes from "./sql_types.json"
 namespace BioQueryParser {
   
   export type SqlAndTs = typeof sqlAndTsTypes.sql_types
-
-  export interface Parser {
-    read(): string
-    clean(): string
-    format(): object
-  }
+  
+  export type SqlAndTsKeys = keyof SqlAndTs
 
   export interface Column {
     name: string

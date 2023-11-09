@@ -1,5 +1,4 @@
 
-
 interface TABLE_STAFF_USER {
   id: string
   username: string
@@ -46,4 +45,16 @@ interface TABLE_ACCESSORY {
   product_id: string
   accessory_type: string
 }
+ 
+interface DATABASE {
+  staff_user: TABLE_STAFF_USER
+  log: TABLE_LOG
+  product: TABLE_PRODUCT
+  product_media: TABLE_PRODUCT_MEDIA
+  motorcycle: TABLE_MOTORCYCLE
+  part: TABLE_PART
+  accessory: TABLE_ACCESSORY
 
+}
+ 
+ export default DATABASE
