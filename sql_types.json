@@ -6,6 +6,7 @@
     "TIMESTAMP": "string | Date",
     "INTEGER": "number",
     "SMALLINT": "number",
-    "BIGINT": "number"
+    "BIGINT": "number",
+    "SERIAL": "number"
   }
 }

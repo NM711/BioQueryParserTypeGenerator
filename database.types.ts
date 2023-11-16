@@ -1,4 +1,17 @@
 
+enum CATEOGRIES {
+VEHICLES = 'Vehicles',
+ACCESSORIES = 'Accessories',
+PARTS = 'Parts',
+
+} 
+enum MOTORCYCLE_TYPES {
+OFFROAD = 'Offroad',
+STANDARD = 'Standard',
+SPORTS = 'Sports',
+CRUISER = 'Cruiser',
+
+} 
 interface TABLE_STAFF_USER {
   id: string
   username: string

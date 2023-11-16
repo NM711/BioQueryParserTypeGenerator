@@ -2,25 +2,19 @@ import * as sqlAndTsTypes from "./sql_types.json"
 import fs from "node:fs"
 import type BioQueryParser from "./parser.types"
 
-type ObjectOfSqlCustomTypes = { enums: BioQueryParser.SqlEnum[], ranges: BioQueryParser.SqlCustomType[], custom: BioQueryParser.SqlCustomType[] }
-
-function initCustomTypes (): ObjectOfSqlCustomTypes {
-  return {
-    enums: [],
-    ranges: [],
-    custom: []
-  }
-}
+// move these later on also work on renaming them
+type CustomTypes = BioQueryParser.SqlEnum[] & BioQueryParser.SqlCustomType[]
+type CustomType = BioQueryParser.SqlEnum<string> & BioQueryParser.SqlCustomType
 
 class BioQuerySQLParser {
   private sqlTypes: BioQueryParser.SqlAndTs
   // havent done anything for range yet, depending on how big this gets might need to
   // make a seperate class for parsing the custom types
-  private sqlCustomTypes: ObjectOfSqlCustomTypes
+  private sqlCustomTypes: CustomTypes
 
   constructor () {
     this.sqlTypes = sqlAndTsTypes.sql_types
-    this.sqlCustomTypes = initCustomTypes()
+    this.sqlCustomTypes = []
   }
 
   private read(): string {
@@ -39,7 +33,6 @@ class BioQuerySQLParser {
         if (!name) continue
 
         const uncleanedColumns = createdTablesSplit[2].replace(/[\d()]/g, "").split(",").map(a => a.replace(/([a-z])([A-Z])/g, '\$1 \$2'))
-        console.log(uncleanedColumns)
         const uncleanedTableDetails: BioQueryParser.UncleanedTableDetails = {
           types: [],
           columns: []
@@ -86,14 +79,10 @@ class BioQuerySQLParser {
     }
   }
 
-  set setEnums ({ name, type, fields }: BioQueryParser.SqlEnum<void>) {
-    this.sqlCustomTypes.enums.push({
-      name,
-      type,
-      fields
-    })
+  set setCustomType (args: CustomType) {
+    this.sqlCustomTypes.push(args)
   }
-  
+
   // since im dealing with switches i wont return anything, rather ill just set the values
   // via a setter method and access later
   private async parseCustomTypes(unformatted: string[]): Promise<void> {
@@ -108,10 +97,10 @@ class BioQuerySQLParser {
       if (!name) continue
       const typeString = createTypeSplit[2]
       // this is maybe not the best solution but it will work for what im trying to do
-      const type = typeString.split("(")[0]
+      const sqlType = typeString.split("(")[0]
 
       switch (true) {
-        case /ENUM/.test(type):
+        case /ENUM/.test(sqlType):
           const splitEnum = typeString.replace(/ENUM/g, '').split(/[(),]/);
           let fields: string[] = []
           for (const x of splitEnum) {
@@ -120,7 +109,7 @@ class BioQuerySQLParser {
             fields.push(x)
           }
 
-        this.setEnums = { name, type: "ENUM", fields }
+        this.setCustomType = { name: name.toUpperCase(), type: "ENUM", fields }
       }
     }
   }
@@ -129,7 +118,38 @@ class BioQuerySQLParser {
     return `\ninterface ${name} {\n${types}\n}\n`
   }
 
-  private async tablesToInterfaces (unformatted: string[]): Promise<string[]> {
+  private createEnumString (name: string, values: string) {
+    return `\nenum ${name} {\n${values}\n}`
+  }
+
+  private async customTypeToTypeTS (unformatted: string[]): Promise<string[]> {
+    const typesToWrite: string[] = []
+    
+    for (const customTypeToken of this.sqlCustomTypes) {
+      if (customTypeToken.type === "ENUM") {
+        const builtEnumStrings: string[] = []
+        for (const field of customTypeToken.fields) {
+          const fieldName = field.replace(/[']/g, "").toUpperCase()
+
+          builtEnumStrings.push(`${fieldName} = ${field},\n`)
+        }
+        const builtEnum = this.createEnumString(customTypeToken.name, builtEnumStrings.join(""))
+        typesToWrite.push(builtEnum)
+      }
+
+      if (customTypeToken.type === "RANGES") {
+
+      }
+
+      if (customTypeToken.type === "CUSTOM") {
+
+      }
+    }
+
+    return typesToWrite
+  }
+
+  private async tablesToInterfacesTS (unformatted: string[]): Promise<string[]> {
     const interfacesToWrite: string[] = []
     
     let databaseTablesInterfaces: string = ""
@@ -163,9 +183,13 @@ class BioQuerySQLParser {
     console.time("Performance")
     const unformatted = this.read().replace(/[\n\s]/g, "").split(";")
     await this.parseCustomTypes(unformatted)
-    const interfaces = await this.tablesToInterfaces(unformatted)
+    const types = await this.customTypeToTypeTS(unformatted)
+    const interfaces = await this.tablesToInterfacesTS(unformatted)
+
+    const data = [...types, ...interfaces].join(" ")
+
     // a+: Open file for reading and appending. The file is created if it does not exist.
-    fs.writeFile("./database.types.ts", interfaces.join(" "), (err) => {
+    fs.writeFile("./database.types.ts", data, (err) => {
       if (err) { 
           console.error(err)
           throw err
