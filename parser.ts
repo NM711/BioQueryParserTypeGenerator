@@ -2,10 +2,25 @@ import * as sqlAndTsTypes from "./sql_types.json"
 import fs from "node:fs"
 import type BioQueryParser from "./parser.types"
 
+type ObjectOfSqlCustomTypes = { enums: BioQueryParser.SqlEnum[], ranges: BioQueryParser.SqlCustomType[], custom: BioQueryParser.SqlCustomType[] }
+
+function initCustomTypes (): ObjectOfSqlCustomTypes {
+  return {
+    enums: [],
+    ranges: [],
+    custom: []
+  }
+}
+
 class BioQuerySQLParser {
   private sqlTypes: BioQueryParser.SqlAndTs
+  // havent done anything for range yet, depending on how big this gets might need to
+  // make a seperate class for parsing the custom types
+  private sqlCustomTypes: ObjectOfSqlCustomTypes
+
   constructor () {
     this.sqlTypes = sqlAndTsTypes.sql_types
+    this.sqlCustomTypes = initCustomTypes()
   }
 
   private read(): string {
@@ -13,23 +28,18 @@ class BioQuerySQLParser {
     return data
   }
 
-  private clean(): BioQueryParser.Table[] | null {
-    console.time("Performance")
+  private async parseTables(unformatted: string[]): Promise<BioQueryParser.SqlTable[] | null> {
     try {
-      const tables: BioQueryParser.Table[] = []
-      const unformatted = this.read()
-
-      const uncleanedTables = unformatted.replace(/[\n\s]/g, "").split(";")
-
-      for (const t of uncleanedTables) {
+      const tables: BioQueryParser.SqlTable[] = []
+      for (const t of unformatted) {
         // LOOK FOR CREATETABLE(.*?) -> GETS ANY IN BETWEEN THAT AND \(\g -> searches globally
-        const split = t.split(/CREATETABLE(.*?)\(/g)
-        const name = split[1]
+        const createdTablesSplit = t.split(/CREATETABLE(.*?)\(/g)
+        const name = createdTablesSplit[1]
 
         if (!name) continue
 
-        const uncleanedColumns = split[2].replace(/[\d()]/g, "").split(",").map(a => a.replace(/([a-z])([A-Z])/g, '\$1 \$2'))
-
+        const uncleanedColumns = createdTablesSplit[2].replace(/[\d()]/g, "").split(",").map(a => a.replace(/([a-z])([A-Z])/g, '\$1 \$2'))
+        console.log(uncleanedColumns)
         const uncleanedTableDetails: BioQueryParser.UncleanedTableDetails = {
           types: [],
           columns: []
@@ -53,7 +63,7 @@ class BioQuerySQLParser {
           }
         }
 
-        const columns: BioQueryParser.Column[] = []
+        const columns: BioQueryParser.SqlColumn[] = []
 
         for (let i = 0; i < uncleanedTableDetails.columns.length; i++) {
           const columnName = uncleanedTableDetails.columns[i]
@@ -69,12 +79,49 @@ class BioQuerySQLParser {
           columns
         })
       }
-        console.timeEnd("Performance")
-        return tables
-      } catch (e) {
-        console.error(e)
+      return tables
+    } catch (e) {
+      console.error(e)
+      return null
+    }
+  }
 
-        return null
+  set setEnums ({ name, type, fields }: BioQueryParser.SqlEnum<void>) {
+    this.sqlCustomTypes.enums.push({
+      name,
+      type,
+      fields
+    })
+  }
+  
+  // since im dealing with switches i wont return anything, rather ill just set the values
+  // via a setter method and access later
+  private async parseCustomTypes(unformatted: string[]): Promise<void> {
+  // look for keywords such as "ENUM"
+  // note that this method is looking somewhat similar to the one above so far,
+  // consider breaking it up into private methods that i can use in both.
+    for (const t of unformatted) {
+      const createTypeSplit = t.split(/CREATETYPE(.*?)AS/g)
+
+      const name = createTypeSplit[1]
+
+      if (!name) continue
+      const typeString = createTypeSplit[2]
+      // this is maybe not the best solution but it will work for what im trying to do
+      const type = typeString.split("(")[0]
+
+      switch (true) {
+        case /ENUM/.test(type):
+          const splitEnum = typeString.replace(/ENUM/g, '').split(/[(),]/);
+          let fields: string[] = []
+          for (const x of splitEnum) {
+            // skip whitespace
+            if (x.length === 0) continue
+            fields.push(x)
+          }
+
+        this.setEnums = { name, type: "ENUM", fields }
+      }
     }
   }
 
@@ -82,13 +129,13 @@ class BioQuerySQLParser {
     return `\ninterface ${name} {\n${types}\n}\n`
   }
 
-  private tablesToInterfaces (): string[] {
+  private async tablesToInterfaces (unformatted: string[]): Promise<string[]> {
     const interfacesToWrite: string[] = []
     
     let databaseTablesInterfaces: string = ""
-    const tables = this.clean()
+    const tables = await this.parseTables(unformatted)
 
-    if (!tables) throw new Error("Cannot write to file because the tables dont exist")
+    if (!tables) throw new Error("Failed to parse tables!")
     
     for (const table of tables) {
       const stringifiedColumns: string[] = []
@@ -112,8 +159,11 @@ class BioQuerySQLParser {
   // NOTE: Still need to work on SQL enum support, essentially I would parse the SQL ENUM and then conver it into a typescript
   // ENUM or A typescript String Literal Type.
 
-  public write(): void {
-    const interfaces = this.tablesToInterfaces()
+  public async write(): Promise<void> {
+    console.time("Performance")
+    const unformatted = this.read().replace(/[\n\s]/g, "").split(";")
+    await this.parseCustomTypes(unformatted)
+    const interfaces = await this.tablesToInterfaces(unformatted)
     // a+: Open file for reading and appending. The file is created if it does not exist.
     fs.writeFile("./database.types.ts", interfaces.join(" "), (err) => {
       if (err) { 
@@ -121,7 +171,7 @@ class BioQuerySQLParser {
           throw err
       }
     })
-
+    console.timeEnd("Performance")
   }
 }
 
