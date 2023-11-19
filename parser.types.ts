@@ -33,6 +33,10 @@ namespace BioQueryParser {
     types: { sql: string, ts: string }[]
     columns: string[]
   }
+
+  
+  export type CustomTypes = BioQueryParser.SqlEnum[] & BioQueryParser.SqlCustomType[]
+  export type CustomType = BioQueryParser.SqlEnum<string> & BioQueryParser.SqlCustomType
 }
 
 export default BioQueryParser
