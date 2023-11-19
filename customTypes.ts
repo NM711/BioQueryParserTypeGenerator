@@ -1,3 +1,4 @@
+import { sql_types } from "./sql_types.json"
 import type BioQueryParser from "./parser.types"
 
 /**
@@ -8,16 +9,20 @@ import type BioQueryParser from "./parser.types"
 
 class SQLCustomTypeParser {
   public sqlCustomTypes: BioQueryParser.CustomTypes
+  public sqlTypes: BioQueryParser.SqlAndTs
 
   constructor () {
-    this.sqlCustomTypes = [] 
+    this.sqlTypes = sql_types
+    this.sqlCustomTypes = []
   }
 
   set generateCustomTypeToken (args: BioQueryParser.CustomType) {
     this.sqlCustomTypes.push(args)
   }
 
-  private async parseCustomTypes(unformatted: string[]): Promise<void> {
+  private parseCustomTypes(unformatted: string[]): void {
+
+    const customTypeNames = {}
   // look for keywords such as "ENUM"
     for (const t of unformatted) {
       const createTypeSplit = t.split(/CREATETYPE(.*?)AS/g)
@@ -39,16 +44,25 @@ class SQLCustomTypeParser {
             fields.push(x)
           }
 
-        this.generateCustomTypeToken = { name: name.toUpperCase(), type: "ENUM", fields }
+        const typescriptTypeName = name.toUpperCase()
+        Object.assign(customTypeNames, { [name]: typescriptTypeName })
+        this.generateCustomTypeToken = { name: typescriptTypeName, type: "ENUM", fields }
       }
     }
+    // merge sql type names with custom type names
+    this.sqlTypes = {
+      ...this.sqlTypes,
+      ...customTypeNames
+    }
+
+    console.log(this.sqlTypes)
   }
 
   private createEnumString (name: string, values: string) {
-    return `\nenum ${name} {\n${values}\n}`
+    return `\nenum ${name} {\n${values}\n}\n`
   }
 
-  public async customTypeToTypeTS (unformatted: string[]): Promise<string[]> {
+  public customTypeToTypeTS (unformatted: string[]): string[] {
     this.parseCustomTypes(unformatted)
     const typesToWrite: string[] = []
 
@@ -58,11 +72,13 @@ class SQLCustomTypeParser {
         for (const field of customTypeToken.fields) {
           const fieldName = field.replace(/["']/g, "").toUpperCase()
 
-          builtEnumStrings.push(`${fieldName.replace(/["']/g, "")} = ${field},\n`)
+          builtEnumStrings.push(`  ${fieldName.replace(/["']/g, "")} = ${field},\n`)
         }
         const builtEnum = this.createEnumString(customTypeToken.name.replace(/["']/g, ""), builtEnumStrings.join(""))
         typesToWrite.push(builtEnum)
       }
+
+      /*
 
       if (customTypeToken.type === "RANGES") {
 
@@ -71,9 +87,14 @@ class SQLCustomTypeParser {
       if (customTypeToken.type === "CUSTOM") {
 
       }
+      */
     }
 
     return typesToWrite
+  }
+
+  public get getUpdatedTypes(): BioQueryParser.SqlAndTs {
+    return this.sqlTypes
   }
 }
 

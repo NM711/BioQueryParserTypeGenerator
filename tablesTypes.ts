@@ -9,11 +9,12 @@ import type BioQueryParser from "./parser.types"
 
 class SQLTableParser {
   public sqlTypes: BioQueryParser.SqlAndTs
+
   constructor (sqlTypes: BioQueryParser.SqlAndTs) {
     this.sqlTypes = sqlTypes
   }
 
-  private async parseTables(unformatted: string[]): Promise<BioQueryParser.SqlTable[] | null> {
+  private parseTables(unformatted: string[]): BioQueryParser.SqlTable[] | null {
     try {
       const tables: BioQueryParser.SqlTable[] = []
       for (const t of unformatted) {
@@ -33,10 +34,9 @@ class SQLTableParser {
           if (!column) continue
 
           uncleanedTableDetails.columns.push(column)
-          
+
           for (const key in this.sqlTypes) {
             const isMatch = x.match(key)?.[0]
-            console.log(isMatch)
             if (!isMatch) continue
             const sqlType = key as BioQueryParser.SqlAndTsKeys
             const tsTypeValue = this.sqlTypes[sqlType]
@@ -67,18 +67,18 @@ class SQLTableParser {
   }
 
   
-  public createInterfaceString (name: string, types: string) {
+  private createInterfaceString (name: string, types: string) {
     return `\ninterface ${name} {\n${types}\n}\n`
   }
 
-  public async tablesToInterfacesTS (unformatted: string[]): Promise<string[]> {
+  public tablesToInterfacesTS (unformatted: string[]): string[] {
     const interfacesToWrite: string[] = []
-    
+
     let databaseTablesInterfaces: string = ""
-    const tables = await this.parseTables(unformatted)
+    const tables = this.parseTables(unformatted)
 
     if (!tables) throw new Error("Failed to parse tables!")
-    
+
     for (const table of tables) {
       const stringifiedColumns: string[] = []
       for (const column of table.columns) {
@@ -91,7 +91,6 @@ class SQLTableParser {
       databaseTablesInterfaces += `  ${table.name.replace(/["']/g, "")}: ${tableInterfaceName}\n`
     }
 
-    // create database interface and export default it
     const databaseInterface = this.createInterfaceString("DATABASE", databaseTablesInterfaces)
 
     interfacesToWrite.push(`${databaseInterface} \n export default DATABASE`)
