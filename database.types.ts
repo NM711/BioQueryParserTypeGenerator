@@ -28,9 +28,9 @@ interface TABLE_PRODUCT {
   id: string
   date_added: string | Date
   brand: string
-  name: string
-  price: number
-  description: string
+  categories: string
+  name: number
+  price: string
 }
  
 interface TABLE_PRODUCT_MEDIA {

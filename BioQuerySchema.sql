@@ -10,13 +10,14 @@ CREATE TABLE log (
   alert TEXT NOT NULL
 );
 
-CREATE TYPE cateogries AS ENUM ('Vehicles', 'Accessories', 'Parts');
+CREATE TYPE Cateogries AS ENUM ('Vehicles', 'Accessories', 'Parts');
 CREATE TYPE motorcycle_types AS ENUM ('Offroad', 'Standard', 'Sports', 'Cruiser');
 
 CREATE TABLE product (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
   date_added TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
   brand VARCHAR(75) NOT NULL,
+  categories Categories NOT NULL,
   name VARCHAR(255) NOT NULL,
   price INTEGER NOT NULL,
   description TEXT DEFAULT 'There is no description for this product!' NOT NULL
