@@ -1,12 +1,12 @@
 
 enum CATEOGRIES {
-VEHICLES = 'Vehicles',
+  VEHICLES = 'Vehicles',
 ACCESSORIES = 'Accessories',
 PARTS = 'Parts',
 
 } 
 enum MOTORCYCLE_TYPES {
-OFFROAD = 'Offroad',
+  OFFROAD = 'Offroad',
 STANDARD = 'Standard',
 SPORTS = 'Sports',
 CRUISER = 'Cruiser',

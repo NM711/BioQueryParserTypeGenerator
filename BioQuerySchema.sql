@@ -14,6 +14,7 @@ CREATE TYPE Cateogries AS ENUM ('Vehicles', 'Accessories', 'Parts');
 CREATE TYPE motorcycle_types AS ENUM ('Offroad', 'Standard', 'Sports', 'Cruiser');
 
 CREATE TABLE product (
+  -- hello world
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
   date_added TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
   brand VARCHAR(75) NOT NULL,
