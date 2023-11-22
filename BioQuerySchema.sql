@@ -1,51 +1,79 @@
-CREATE TABLE staff_user (
-  id VARCHAR(255) PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  username VARCHAR (255) UNIQUE,
-  password VARCHAR (255) NOT NULL,
-  key VARCHAR (255) NOT NULL
+CREATE EXTENSION "uuid-ossp";
+
+CREATE TABLE "user"(
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  username VARCHAR(125) NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL
 );
 
-CREATE TABLE log (
-  creation_data TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  alert TEXT NOT NULL
+CREATE TABLE "profile"(
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  user_id UUID UNIQUE REFERENCES "user"(id),
+  description TEXT DEFAULT NULL,
+  picture TEXT DEFAULT NULL
 );
 
-CREATE TYPE Cateogries AS ENUM ('Vehicles', 'Accessories', 'Parts');
-CREATE TYPE motorcycle_types AS ENUM ('Offroad', 'Standard', 'Sports', 'Cruiser');
+CREATE TABLE "post" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  author_id UUID REFERENCES "user"(id),
+  title VARCHAR(255) NOT NULL,
+  content TEXT DEFAULT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  attachment_url VARCHAR(255) DEFAULT NULL
+);
 
-CREATE TABLE product (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  date_added TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  brand VARCHAR(75) NOT NULL,
-  categories Categories NOT NULL,
+CREATE TABLE "post_comment" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  author_id UUID REFERENCES "user"(id) ON DELETE CASCADE,
+  post_id UUID REFERENCES "post"(id) ON DELETE CASCADE,
+  content TEXT DEFAULT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE "post_upvote" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES "user"(id),
+  post_id UUID REFERENCES "post"(id) ON DELETE CASCADE
+);
+
+CREATE TABLE "post_downvote" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES "user"(id),
+  post_id UUID REFERENCES "post"(id) ON DELETE CASCADE
+);
+
+CREATE TABLE "community" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
-  price INTEGER NOT NULL,
-  description TEXT DEFAULT 'There is no description for this product!' NOT NULL
+  description TEXT NOT NULL,
+  member_count BIGINT DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE TABLE product_media (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-  url VARCHAR(255)
+
+CREATE TYPE "authority" AS ENUM ('OWNER', 'ADMINISTRATOR', 'MEMBER');
+
+CREATE TABLE "community_role" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  community_id UUID REFERENCES "community"(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL DEFAULT 'COMMUNITY_ROLE',
+  role_authorithy "authority" NOT NULL
 );
 
-CREATE TABLE motorcycle (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-  year SMALLINT NOT NULL,
-  mileage INTEGER,
-  motorcycle_type motorcycle_types NOT NULL
+CREATE TABLE "community_member" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES "user"(id) ON DELETE CASCADE,
+  community_id UUID REFERENCES "community"(id) ON DELETE CASCADE,
+  community_role_id UUID REFERENCES "community_role"(id) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE TABLE part (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-  part_number VARCHAR(255) NOT NULL,
-  part_type VARCHAR(255) NOT NULL
-);
-
-CREATE TABLE accessory (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-  accessory_type VARCHAR(255) NOT NULL
+CREATE TABLE "community_post" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  community_id UUID REFERENCES "community"(id) ON DELETE CASCADE,
+  post_id UUID UNIQUE REFERENCES "post"(id) ON DELETE CASCADE,
+  community_member_id UUID REFERENCES "community_member" ON DELETE CASCADE
 );
