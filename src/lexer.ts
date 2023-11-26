@@ -4,14 +4,24 @@ class SchemaLexer {
   private tokens: LexerTypes.Token[]
   private regex: LexerTypes.Regex
   private columnKeywords: Set<LexerTypes.KeywordKey>
-  private sqlTypes: string[]
+  private sqlTypes: typeof LexerTypes.sqlTypes
+  private sqlTypesKeys: string[]
 
   constructor () {
     this.regex = this.generateRegex
     this.tokens = []
     this.columnKeywords = new Set(Object.keys(LexerTypes.Keywords) as LexerTypes.KeywordKey[])
-    this.sqlTypes = Object.keys(LexerTypes.sqlTypes)
+    this.sqlTypes = LexerTypes.sqlTypes
+    this.sqlTypesKeys = Object.keys(this.sqlTypes)
   }
+
+  /**
+  * @method generateRegex
+  * @description
+  * Private gette method used for the intialization of this.regex, this way I dont bloat the constructor.
+  * The provided regex data is used for parsing the schema and breaking up the relevant parts into smaller, more digestable
+  * pieces.
+  * */
 
   private get generateRegex(): LexerTypes.Regex {
     return {
@@ -22,10 +32,27 @@ class SchemaLexer {
     }
   }
 
-  private set updateSqlTypes(value: string | string[]) {
-    if (typeof value === "object") this.sqlTypes.push(...value)
-    else this.sqlTypes.push(value)
+  /**
+   * @method updateSqlTypesKeys
+   * @param value
+   * @type string | string[]
+   * @description
+   * Private setter method used to update the keys of the sqlTypesKeys array.
+   */
+
+  private set updateSqlTypesKeys(value: string | string[]) {
+    if (typeof value === "object") this.sqlTypesKeys.push(...value)
+    else this.sqlTypesKeys.push(value)
   }
+
+  /**
+   * @method commentRemover
+   * @param unformatted
+   * @type string
+   * @description
+   * Private method that takes the entirety of the BioQuerySchema.sql as a string then, removes the comments via regex and lastly
+   * returns the updated comment free, schema string.
+   */
 
   private commentRemover (unformatted: string): string {
     if (this.regex.comment.test(unformatted)) {
@@ -55,7 +82,7 @@ class SchemaLexer {
       const declaredType = restOfString.shift()
 
       if (!declaredType) continue
-      this.updateSqlTypes = typeName.trim()
+      this.updateSqlTypesKeys = typeName.trim()
 
       const typeValuesThatWereSet = restOfString.filter(f => f !== "").map(t => {
         if (typeof t === "number") return Number(t)
@@ -80,16 +107,8 @@ class SchemaLexer {
     }
   }
 
-  private tokenizeTablesAndColumns (tables: string[]) {
-    // table level iteration
-    for (const table of tables) {
-      const splitTable = table.split(this.regex.table)
-      const tableName = splitTable[1].trim()
-      // d+ = one or more digits compared to \d digit
-      const tableColumns = splitTable[2].replace(/\(\d+\)/g, "").split(this.regex.column)
-
-
-      const columnTokens: LexerTypes.ColumnDataToken[] = []
+  private tokenizeColumns (tableColumns: string[]): LexerTypes.ColumnDataToken[] {
+     const columnTokens: LexerTypes.ColumnDataToken[] = []
       // column level iteration
       for (const column of tableColumns) {
         if (column === "") continue
@@ -100,7 +119,7 @@ class SchemaLexer {
 
         let columnConstraints: LexerTypes.KeywordKey[] = []
         let columnType: string = ""
-        const sqlTypesSet = new Set(this.sqlTypes)
+        const sqlTypesKeysSet = new Set(this.sqlTypesKeys)
         // word level iteration
         for (let i = 0; i <= splitCol.length; i++) {
           const word = splitCol[i] ? splitCol[i].trim() : ""
@@ -108,7 +127,7 @@ class SchemaLexer {
 
           const unionizedKeyword = `${word} ${nextWord}` as LexerTypes.KeywordKey
 
-          if (sqlTypesSet.has(word)) columnType = word
+          if (sqlTypesKeysSet.has(word)) columnType = word
 
           if (this.columnKeywords.has(word as LexerTypes.KeywordKey)) {
               columnConstraints.push(word as LexerTypes.KeywordKey)
@@ -128,11 +147,24 @@ class SchemaLexer {
       })
     }
 
-    this.tokens.push({
-      token_id: LexerTypes.TokenType.TABLE,
-      name: this.formatName(tableName),
-      columns: columnTokens
-    })
+    return columnTokens
+  }
+
+  private tokenizeTablesAndColumns (tables: string[]) {
+    // table level iteration
+    for (const table of tables) {
+      const splitTable = table.split(this.regex.table)
+      const tableName = splitTable[1].trim()
+      // d+ = one or more digits compared to \d digit
+      const tableColumns = splitTable[2].replace(/\(\d+\)/g, "").split(this.regex.column)
+
+      const columnTokens = this.tokenizeColumns(tableColumns)
+
+      this.tokens.push({
+        token_id: LexerTypes.TokenType.TABLE,
+        name: this.formatName(tableName),
+        columns: columnTokens
+      })
   }
 }
 
@@ -142,10 +174,26 @@ class SchemaLexer {
     return true
   }
 
+  /**
+   * @method tokenize
+   * @param data
+   * @type string
+   * @description
+   * Private method that tokenizes everything of relevance within the, BioQuerySchema.sql file.
+   *
+   * @example
+   * Example output:
+   * {
+       token_id: 'TABLE',
+        name: 'StaffUser',
+        columns: [ [Object], [Object], [Object], [Object] ]
+     }
+   *
+   */
+
   private tokenize (data: string) {
     const tables: string[] = []
     const customTypes: string[] = []
-
     const dividedSchema = data.split(/;\n/g)
 
     for (const block of dividedSchema) {
@@ -164,10 +212,48 @@ class SchemaLexer {
     this.tokenizeTablesAndColumns(tables)
   }
 
+
+  /**
+  * @method buildSqlTypes
+  * @description
+  * Builds the sqlTypes object with new added custom types and its typescript definition.
+  * This can be used before running the retrieveSqlTypes getter.
+  * */
+
+  private buildSqlTypes() {
+    for (const key of this.sqlTypesKeys) {
+      if (!this.sqlTypes[key as keyof typeof this.sqlTypes]) {
+        // @ts-ignore
+        this.sqlTypes[key] = this.formatName(key)
+      }
+    }
+  }
+  
+  /**
+   * @method retrieveSqlTypes
+   * @description
+   * Getter method that returns the set sqlTypes, this can come in handy when there is custom types
+   * that need to be moved from this class to another.
+   */
+
+  public get retrieveSqlTypes() {
+    this.buildSqlTypes()
+    return this.sqlTypes
+  }
+
+  /**
+   * @method execute
+   * @param unformatted
+   * @type string
+   * @description
+   * Public method that executes the tokenizers after, being provided the BioQuerySchema.sql files unformatted data as a string
+   **/
+
   public execute (unformatted: string) {
     console.time("Tokenization Time")
     const cleansed = this.commentRemover(unformatted)
     this.tokenize(cleansed)
+    console.log(this.tokens)
     console.timeEnd("Tokenization Time")
     return this.tokens
   }

@@ -18,6 +18,8 @@ class SchemaParser {
   public write () {
     const unformatted = this.read()
     const tokens = this.lexer.execute(unformatted)
+    const lexerSqlTypes = this.lexer.retrieveSqlTypes
+    this.builder.setCustomSqlTypes = lexerSqlTypes
     this.builder.buildTypes(tokens)
   }
 }
