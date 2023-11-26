@@ -10,7 +10,7 @@ CREATE TABLE log (
   alert TEXT NOT NULL
 );
 
-CREATE TYPE Cateogries AS ENUM ('Vehicles', 'Accessories', 'Parts');
+CREATE TYPE Categories AS ENUM ('Vehicles', 'Accessories', 'Parts');
 CREATE TYPE motorcycle_types AS ENUM ('Offroad', 'Standard', 'Sports', 'Cruiser');
 
 CREATE TABLE product (
