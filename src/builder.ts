@@ -58,9 +58,7 @@ class TypeBuilderTS {
     let tableInterfaceFields: string[] = []
     for (const column of table.columns) {
       const tsType = this.sqlTypes[column.type]
-
       if (!tsType) throw Error("Something went wrong while looking up the given type!")
-
       let interfaceField = `  ${column.name}?: ${tsType}`
       // for the kysley mode, this switch will have a greater role
       switch (true) {
@@ -93,8 +91,9 @@ class TypeBuilderTS {
 
   public buildTypes (tokens: LexerTypes.Token[]) {
     for (const token of tokens) {
-      switch (true) {
-        case token.token_id === LexerTypes.TokenType.ENUM: {
+
+      switch (token.token_id) {
+        case LexerTypes.TokenType.ENUM: {
           const literalValues = token.value.join(" | ")
           const literalType = this.tsTypesBuilder({ name: token.name, values: literalValues, mode: "TYPE" })
 
@@ -102,19 +101,18 @@ class TypeBuilderTS {
           break
         }
 
-        /*case token.token_id === LexerTypes.TokenType.RANGE: {
-
-        }*/
-
-        case token.token_id === LexerTypes.TokenType.CUSTOM_TYPE: {
+        case LexerTypes.TokenType.RANGE: {
           break
         }
 
-        case token.token_id === LexerTypes.TokenType.TABLE: {
+        case LexerTypes.TokenType.CUSTOM_TYPE: {
+          break
+        }
+
+        case LexerTypes.TokenType.TABLE: {
           this.tableInterfaceBuilder(token)
           break
         }
-
       }
     }
   }
