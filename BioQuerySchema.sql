@@ -15,19 +15,19 @@ CREATE TYPE motorcycle_types AS ENUM ('Offroad', 'Standard', 'Sports', 'Cruiser'
 
 CREATE TABLE product (
   -- hello world
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+       id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
   date_added TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
   brand VARCHAR(75) NOT NULL,
-  categories Categories NOT NULL,
+  categories Categories NOT NULL, -- hey hi
   name VARCHAR(255) NOT NULL,
   price INTEGER NOT NULL,
   description TEXT DEFAULT 'There is no description for this product!' NOT NULL
 );
 
 CREATE TABLE product_media (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-  product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-  url VARCHAR(255)
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
+url VARCHAR(255)
 );
 
 CREATE TABLE motorcycle (

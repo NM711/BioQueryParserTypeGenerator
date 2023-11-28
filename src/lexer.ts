@@ -28,7 +28,7 @@ class SchemaLexer {
       table: /CREATE TABLE(.*?)\(/g,
       column: /[,\n]/g,
       custom_type: /CREATE TYPE\s/g,
-      comment: /--(.*?)\n/
+      comment: /--(.*?)\n/g,
     }
   }
 
@@ -46,7 +46,7 @@ class SchemaLexer {
   }
 
   /**
-   * @method commentRemover
+   * @method commentRemoverAndStringFormatter
    * @param unformatted
    * @type string
    * @description
@@ -54,12 +54,32 @@ class SchemaLexer {
    * returns the updated comment free, schema string.
    */
 
-  private commentRemover (unformatted: string): string {
-    if (this.regex.comment.test(unformatted)) {
-        unformatted = unformatted.replace(this.regex.comment, "")
-    }
+  private commentRemoverAndStringFormatter (unformatted: string): string {
+    // removes all whitespace that occurs within the instance of new line
+    unformatted = unformatted.replace(/^\s+/gm, "")
 
-    return unformatted
+    if (this.regex.comment.test(unformatted)) {
+        unformatted = unformatted.replace(this.regex.comment, "\n");
+    };
+
+    // Must deliver a formatted string that the tokenizers can read
+
+    const splitUnformatted = unformatted.split("\n");
+
+    for (let i = 0; i <= splitUnformatted.length; i++) {
+      const word = splitUnformatted[i];
+
+      if (word === "" || !word) continue;
+
+      if (!word.includes("CREATE") && word !== ");") {
+        let doubleIndent = "  ";
+        splitUnformatted[i] = doubleIndent += word;
+      };
+    };
+
+    unformatted = splitUnformatted.join("\n");
+
+    return unformatted;
   }
 
   private formatName (str: string): string {
@@ -116,7 +136,6 @@ class SchemaLexer {
         const columnName = splitCol[2]
 
         if (!columnName) continue
-
         let setOfColumnConstraints: Set<LexerTypes.KeywordKey> = new Set()
         let columnType: string = ""
         const sqlTypesKeysSet = new Set(this.sqlTypesKeys)
@@ -157,7 +176,6 @@ class SchemaLexer {
       const tableName = splitTable[1].trim()
       // d+ = one or more digits compared to \d digit
       const tableColumns = splitTable[2].replace(/\(\d+\)/g, "").split(this.regex.column)
-
       const columnTokens = this.tokenizeColumns(tableColumns)
 
       this.tokens.push({
@@ -249,7 +267,7 @@ class SchemaLexer {
    **/
 
   public execute (unformatted: string) {
-    const cleansed = this.commentRemover(unformatted)
+    const cleansed = this.commentRemoverAndStringFormatter(unformatted)
     this.tokenize(cleansed)
     return this.tokens
   }

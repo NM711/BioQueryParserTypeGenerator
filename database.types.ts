@@ -4,49 +4,50 @@ export type Categories = "Vehicles" | "Accessories" | "Parts"
 export type MotorcycleTypes = "Offroad" | "Standard" | "Sports" | "Cruiser"
  
 export interface StaffUserTable {
-  id?: string | Generated<string>
-  username: string | Generated<string>
-  password: string | Generated<string>
-  key: string | Generated<string>
+  id?: string
+  username: string
+  password: string
+  key: string
 }
  
 export interface LogTable {
-  creation_data: Date | string | Generated<Date | string>
-  alert: string | Generated<string>
+  creation_data: Date | string
+  alert: string
 }
  
 export interface ProductTable {
-  date_added: Date | string | Generated<Date | string>
-  brand: string | Generated<string>
-  categories: Categories | Generated<Categories>
-  name: string | Generated<string>
-  price: number | Generated<number>
-  description: string | Generated<string>
+  id?: string
+  date_added: Date | string
+  brand: string
+  categories: Categories
+  name: string
+  price: number
+  description: string
 }
  
 export interface ProductMediaTable {
-  id?: string | Generated<string>
-  product_id: string | Generated<string>
+  id?: string
+  product_id: string
   url?: string
 }
  
 export interface MotorcycleTable {
-  id?: string | Generated<string>
-  product_id: string | Generated<string>
-  year: number | Generated<number>
+  id?: string
+  product_id: string
+  year: number
   mileage?: number
-  motorcycle_type: MotorcycleTypes | Generated<MotorcycleTypes>
+  motorcycle_type: MotorcycleTypes
 }
  
 export interface PartTable {
-  id?: string | Generated<string>
-  product_id: string | Generated<string>
-  part_number: string | Generated<string>
-  part_type: string | Generated<string>
+  id?: string
+  product_id: string
+  part_number: string
+  part_type: string
 }
  
 export interface AccessoryTable {
-  id?: string | Generated<string>
-  product_id: string | Generated<string>
-  accessory_type: string | Generated<string>
+  id?: string
+  product_id: string
+  accessory_type: string
 }
