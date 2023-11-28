@@ -37,7 +37,7 @@ namespace LexerTypes {
     token_id: TokenType.COLUMN
     type: keyof typeof sqlTypes | string,
     name: string,
-    constraints: KeywordKey[]
+    constraints: Set<KeywordKey>
   }
 
   export interface TableDataToken {

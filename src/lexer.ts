@@ -3,14 +3,14 @@ import LexerTypes from "../types/lexer.types"
 class SchemaLexer {
   private tokens: LexerTypes.Token[]
   private regex: LexerTypes.Regex
-  private columnKeywords: Set<LexerTypes.KeywordKey>
-  private sqlTypes: typeof LexerTypes.sqlTypes
+  private declaredColumnKeywords: Set<LexerTypes.KeywordKey>
+  private sqlTypes: typeof LexerTypes.sqlTypes & Record<string, string>
   private sqlTypesKeys: string[]
 
   constructor () {
     this.regex = this.generateRegex
     this.tokens = []
-    this.columnKeywords = new Set(Object.keys(LexerTypes.Keywords) as LexerTypes.KeywordKey[])
+    this.declaredColumnKeywords = new Set(Object.keys(LexerTypes.Keywords) as LexerTypes.KeywordKey[])
     this.sqlTypes = LexerTypes.sqlTypes
     this.sqlTypesKeys = Object.keys(this.sqlTypes)
   }
@@ -117,7 +117,7 @@ class SchemaLexer {
 
         if (!columnName) continue
 
-        let columnConstraints: LexerTypes.KeywordKey[] = []
+        let setOfColumnConstraints: Set<LexerTypes.KeywordKey> = new Set()
         let columnType: string = ""
         const sqlTypesKeysSet = new Set(this.sqlTypesKeys)
         // word level iteration
@@ -129,12 +129,12 @@ class SchemaLexer {
 
           if (sqlTypesKeysSet.has(word)) columnType = word
 
-          if (this.columnKeywords.has(word as LexerTypes.KeywordKey)) {
-              columnConstraints.push(word as LexerTypes.KeywordKey)
+          if (this.declaredColumnKeywords.has(word as LexerTypes.KeywordKey)) {
+              setOfColumnConstraints.add(word as LexerTypes.KeywordKey)
           }
 
-          if (this.columnKeywords.has(unionizedKeyword)) {
-             columnConstraints.push(unionizedKeyword)
+          if (this.declaredColumnKeywords.has(unionizedKeyword)) {
+             setOfColumnConstraints.add(unionizedKeyword)
           }
 
       }
@@ -143,7 +143,7 @@ class SchemaLexer {
         token_id: LexerTypes.TokenType.COLUMN,
         type: columnType,
         name: columnName,
-        constraints: columnConstraints
+        constraints: setOfColumnConstraints
       })
     }
 
@@ -223,7 +223,6 @@ class SchemaLexer {
   private buildSqlTypes() {
     for (const key of this.sqlTypesKeys) {
       if (!this.sqlTypes[key as keyof typeof this.sqlTypes]) {
-        // @ts-ignore
         this.sqlTypes[key] = this.formatName(key)
       }
     }
@@ -250,11 +249,8 @@ class SchemaLexer {
    **/
 
   public execute (unformatted: string) {
-    console.time("Tokenization Time")
     const cleansed = this.commentRemover(unformatted)
     this.tokenize(cleansed)
-    console.log(this.tokens)
-    console.timeEnd("Tokenization Time")
     return this.tokens
   }
 }

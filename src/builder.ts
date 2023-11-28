@@ -1,18 +1,15 @@
+import BuilderTypes from "../types/builder"
 import LexerTypes from "../types/lexer.types"
-
-interface TSBuilderParams {
-  name: string,
-  values: string,
-  mode: "INTERFACE" | "TYPE"
-}
 
 class TypeBuilderTS {
   private built: string[]
-  private sqlTypes
+  private sqlTypes: typeof LexerTypes.sqlTypes & Record<string, string>
+  private kysleyBuildMode: boolean
 
   constructor () {
     this.built = []
     this.sqlTypes = LexerTypes.sqlTypes
+    this.kysleyBuildMode = false
   }
 
   /***
@@ -41,20 +38,48 @@ class TypeBuilderTS {
    * OUTPUT EXAMPLE: `\ntype "RandomTypeName" = "Cars" | "Motorcycles" | "Airplanes" \n`
    **/
   
-  private tsTypesBuilder({ name, values, mode }: TSBuilderParams): string {
+  private tsTypesBuilder({ name, values, mode }: BuilderTypes.TSBuilderParams): string {
     switch (mode) {
       case "INTERFACE": {
-        return `\ninterface ${name} {\n${values}\n}\n`
+        return `\nexport interface ${name} {\n${values}\n}\n`
       }
 
       case "TYPE": {
-        return `\ntype ${name} = ${values}\n`
+        return `\nexport type ${name} = ${values}\n`
       }
 
       default: {
         return "NO VALID MODE PROVIDED!"
       }
     }
+  }
+
+  private tableInterfaceBuilder (table: LexerTypes.TableDataToken): void {
+    let tableInterfaceFields: string[] = []
+    for (const column of table.columns) {
+      const tsType = this.sqlTypes[column.type]
+
+      if (!tsType) throw Error("Something went wrong while looking up the given type!")
+
+      let interfaceField = `  ${column.name}?: ${tsType}`
+      // for the kysley mode, this switch will have a greater role
+      switch (true) {
+        case column.constraints.has("UNIQUE") || column.constraints.has("NOT NULL"): {
+          interfaceField = interfaceField.replace("?", "")
+        }
+
+        case column.constraints.has("DEFAULT"): {
+          if (this.kysleyBuildMode) {
+            interfaceField += ` | Generated<${tsType}>`
+          }
+        }
+      }
+
+      tableInterfaceFields.push(interfaceField)
+    }
+
+    const tableInterface = this.tsTypesBuilder({ name: `${table.name}Table`, values: tableInterfaceFields.join("\n"), mode: "INTERFACE" })
+    this.built.push(tableInterface)
   }
 
   /**
@@ -69,7 +94,6 @@ class TypeBuilderTS {
   public buildTypes (tokens: LexerTypes.Token[]) {
     for (const token of tokens) {
       switch (true) {
-
         case token.token_id === LexerTypes.TokenType.ENUM: {
           const literalValues = token.value.join(" | ")
           const literalType = this.tsTypesBuilder({ name: token.name, values: literalValues, mode: "TYPE" })
@@ -78,28 +102,33 @@ class TypeBuilderTS {
           break
         }
 
+        /*case token.token_id === LexerTypes.TokenType.RANGE: {
+
+        }*/
+
         case token.token_id === LexerTypes.TokenType.CUSTOM_TYPE: {
           break
         }
 
         case token.token_id === LexerTypes.TokenType.TABLE: {
-          const formattedColumns: string[] = []
-          for (const col of token.columns) {
-          }
-
+          this.tableInterfaceBuilder(token)
           break
         }
 
       }
     }
-
-    console.log(this.built)
   }
 
   public get retrieveBuilt() {
+
     return this.built
   }
 
+  public set setMode (argMode: string) {
+    if (argMode === "kysley") {
+      this.kysleyBuildMode = true
+    }
+  }
 }
 
 export default TypeBuilderTS
