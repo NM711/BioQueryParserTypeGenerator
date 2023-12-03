@@ -1,13 +1,16 @@
 import BuilderTypes from "../types/builder"
 import LexerTypes from "../types/lexer.types"
+import { formatTypeName } from "./utils"
 
 class TypeBuilderTS {
   private built: string[]
   private sqlTypes: typeof LexerTypes.sqlTypes & Record<string, string>
   private kysleyBuildMode: boolean
+  private databaseInterfaceFields: string[]
 
   constructor () {
     this.built = []
+    this.databaseInterfaceFields = []
     this.sqlTypes = LexerTypes.sqlTypes
     this.kysleyBuildMode = false
   }
@@ -75,9 +78,12 @@ class TypeBuilderTS {
 
       tableInterfaceFields.push(interfaceField)
     }
-
-    const tableInterface = this.tsTypesBuilder({ name: `${table.name}Table`, values: tableInterfaceFields.join("\n"), mode: "INTERFACE" })
+    const tableTypeName = `${formatTypeName(table.name)}Table`
+    const tableInterface = this.tsTypesBuilder({ name: tableTypeName, values: tableInterfaceFields.join("\n"), mode: "INTERFACE" })
     this.built.push(tableInterface)
+
+    // find a way to seperate second upper case with underscore.
+    this.databaseInterfaceFields.push(`  ${table.name.toLowerCase()}: ${tableTypeName}`)
   }
 
   /**
@@ -95,6 +101,7 @@ class TypeBuilderTS {
       switch (token.token_id) {
         case LexerTypes.TokenType.ENUM: {
           const literalValues = token.value.join(" | ")
+          // custom types like enums, dont need to be formatted ig
           const literalType = this.tsTypesBuilder({ name: token.name, values: literalValues, mode: "TYPE" })
 
           this.built.push(literalType)
@@ -115,10 +122,13 @@ class TypeBuilderTS {
         }
       }
     }
+
+    // build database interface
+    const databaseInterface = this.tsTypesBuilder({ name: "Database", values: this.databaseInterfaceFields.join("\n"), mode: 'INTERFACE' })
+    this.built.push(databaseInterface)
   }
 
   public get retrieveBuilt() {
-
     return this.built
   }
 
