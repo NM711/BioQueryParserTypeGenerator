@@ -1,53 +1,84 @@
 
-export type Categories = "Vehicles" | "Accessories" | "Parts"
+export type Authority = "OWNER" | "ADMINISTRATOR" | "MEMBER" | "CUSTOM"
  
-export type MotorcycleTypes = "Offroad" | "Standard" | "Sports" | "Cruiser"
- 
-export interface StaffUserTable {
-  id?: string
+export interface UserTable {
+  id: string
   username: string
-  password: string
-  key: string
+  password_hash: string
+  description?: string
+  picture?: string
 }
  
-export interface LogTable {
-  creation_data: Date | string
-  alert: string
+export interface PostTable {
+  id: string
+  author_id?: string
+  title: string
+  content?: string
+  created_at: Date | string
+  updated_at: Date | string
+  attachment_url?: string
 }
  
-export interface ProductTable {
-  id?: string
-  date_added: Date | string
-  brand: string
-  categories: Categories
+export interface PostCommentTable {
+  id: string
+  author_id?: string
+  post_id?: string
+  content?: string
+  created_at: Date | string
+  updated_at: Date | string
+}
+ 
+export interface PostUpvoteTable {
+  id: string
+  user_id?: string
+  post_id?: string
+}
+ 
+export interface PostDownvoteTable {
+  id: string
+  user_id?: string
+  post_id?: string
+}
+ 
+export interface CommunityTable {
+  id: string
   name: string
-  price: number
   description: string
+  member_count?: number
+  created_at: Date | string
+  updated_at: Date | string
 }
  
-export interface ProductMediaTable {
-  id?: string
-  product_id: string
-  url?: string
+export interface CommunityRoleTable {
+  id: string
+  community_id?: string
+  name: string
+  role_authority: Authority
 }
  
-export interface MotorcycleTable {
-  id?: string
-  product_id: string
-  year: number
-  mileage?: number
-  motorcycle_type: MotorcycleTypes
+export interface CommunityMemberTable {
+  id: string
+  user_id?: string
+  community_id?: string
+  community_role_id: string
+  created_at: Date | string
 }
  
-export interface PartTable {
-  id?: string
-  product_id: string
-  part_number: string
-  part_type: string
+export interface CommunityPostTable {
+  id: string
+  community_id?: string
+  post_id: string
+  community_member_id?: string
 }
  
-export interface AccessoryTable {
-  id?: string
-  product_id: string
-  accessory_type: string
+export interface Database {
+  user: UserTable
+  post: PostTable
+  post_comment: PostCommentTable
+  post_upvote: PostUpvoteTable
+  post_downvote: PostDownvoteTable
+  community: CommunityTable
+  community_role: CommunityRoleTable
+  community_member: CommunityMemberTable
+  community_post: CommunityPostTable
 }

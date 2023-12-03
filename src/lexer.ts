@@ -1,4 +1,5 @@
 import LexerTypes from "../types/lexer.types"
+import { formatTypeName } from "./utils"
 
 class SchemaLexer {
   private tokens: LexerTypes.Token[]
@@ -82,16 +83,6 @@ class SchemaLexer {
     return unformatted;
   }
 
-  private formatName (str: string): string {
-    const splitName = str.toLowerCase().trim().split(/[_-]/g)
-    let name = ""
-
-    for (const n of splitName) {
-      name += n.charAt(0).toUpperCase() + n.slice(1)
-    }
-    return name
-  }
-
   private tokenizeCustomType (decalaredCustomType: string[]) {
     for (const customType of decalaredCustomType) {
       const brokenDownString = customType.split(/CREATE TYPE(.*?)AS/g)
@@ -102,6 +93,7 @@ class SchemaLexer {
       const declaredType = restOfString.shift()
 
       if (!declaredType) continue
+      const formattedCustomTypeName = formatTypeName(typeName.trim().replace(/["]/g, ""))
       this.updateSqlTypesKeys = typeName.trim()
 
       const typeValuesThatWereSet = restOfString.filter(f => f !== "").map(t => {
@@ -109,11 +101,12 @@ class SchemaLexer {
         return `"${t}"`
       }) as string[] | number[]
 
+
       switch (declaredType) {
        case LexerTypes.TokenType.ENUM || LexerTypes.TokenType.ENUM.toLowerCase():
          this.tokens.push({
            token_id: LexerTypes.TokenType.ENUM,
-           name: this.formatName(typeName),
+           name: formattedCustomTypeName,
            value: typeValuesThatWereSet
          })
         break
@@ -134,8 +127,8 @@ class SchemaLexer {
         if (column === "") continue
         const splitCol = column.split(" ")
         const columnName = splitCol[2]
-
         if (!columnName) continue
+
         let setOfColumnConstraints: Set<LexerTypes.KeywordKey> = new Set()
         let columnType: string = ""
         const sqlTypesKeysSet = new Set(this.sqlTypesKeys)
@@ -180,7 +173,7 @@ class SchemaLexer {
 
       this.tokens.push({
         token_id: LexerTypes.TokenType.TABLE,
-        name: this.formatName(tableName),
+        name: tableName.replace(/["]/g, ""),
         columns: columnTokens
       })
   }
@@ -241,7 +234,7 @@ class SchemaLexer {
   private buildSqlTypes() {
     for (const key of this.sqlTypesKeys) {
       if (!this.sqlTypes[key as keyof typeof this.sqlTypes]) {
-        this.sqlTypes[key] = this.formatName(key)
+        this.sqlTypes[key] = formatTypeName(key.replace(/["]/g, ""))
       }
     }
   }
