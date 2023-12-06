@@ -1,5 +1,12 @@
 {
+  "name": "bioquery-typegenerator",
+  "license": "mit",
+  "author": "NM711",
+  "scripts": {
+    "generate": "npx tsx ./index.ts"
+  },
   "dependencies": {
     "@types/node": "^20.9.0"
-  }
+  },
+  "version": "1.0.1"
 }
