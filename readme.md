@@ -1,13 +1,24 @@
 # BioQueryTypeGenerator
-A simple type generator developed for https://github.com/NM711/BioQueryBuilder for postgresql and in the future, for other sql databases.
+
+Github Repository: https://github.com/NM711/BioQueryParserTypeGenerator
+
+A simple type generator developed for https://github.com/NM711/BioQueryBuilder a query builder. 
+
+For postgresql and in the future, for other sql databases.
 
 ```sh
   npm install bioquery-typegenerator
 ```
 
 ## Type Generation
-To generate your types you must provide a sql file named <b>BioQuerySchema.sql</b> which will be formatted, tokenized, and built into a <b>database.types.ts</b> file.
+To generate your types you must provide a sql file named <b>BioQuerySchema.sql</b> in your project root, 
+which will be formatted, tokenized, and built by the package, by running: 
 
+```sh
+  npx bioquery-typegenerator
+```
+
+Then you will see a file named <b>database.types.ts</b> genreated into your projects root. This file contains all your generated types.
 
 ### Basic Tables Example
 
@@ -19,7 +30,6 @@ CREATE TABLE "user"(
   username VARCHAR(125) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   description TEXT DEFAULT NULL,
-  -- expecting url to picture.
   picture TEXT DEFAULT NULL
 );
 
@@ -104,11 +114,11 @@ In the future, I plan to implement conversion for other user defined types.
 This feature is still in development.
 
 ```sh
-  npm run generate -- --mode kysley
+  npm bioquery-typegenerator --mode kysley
 ``` 
 OR
 ```sh
-  npm run genereate  -- -m kysley
+  npx bioquery-typegenerator -m kysley
 ```
 
 #### SQL
@@ -119,7 +129,6 @@ CREATE TABLE "user"(
   username VARCHAR(125) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   description TEXT DEFAULT NULL,
-  -- expecting url to picture.
   picture TEXT DEFAULT NULL
 );
 

@@ -1,16 +1,27 @@
 {
   "name": "bioquery-typegenerator",
-  "license": "mit",
+  "version": "1.0.3",
+  "license": "MIT",
   "author": "NM711",
+  "main": "./index.js",
+  "description": "Sql schema to typescript, type file generator",
   "scripts": {
-    "generate": "npx tsx ./index.ts"
+    "generate": "node ./index.js"
+  },
+  "bin": {
+    "bioquery-typegenerator": "./index.js"
   },
   "respository": {
     "type": "git",
     "url": "https://github.com/NM711/BioQueryParserTypeGenerator"
   },
+  "keywords": [
+    "typescript",
+    "javascript",
+    "sql",
+    "postgresql"
+  ],
   "dependencies": {
     "@types/node": "^20.9.0"
-  },
-  "version": "1.0.2"
+  }
 }

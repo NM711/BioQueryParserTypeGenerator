@@ -21,7 +21,6 @@ class SchemaParser {
  
     const mode = flags[0]
     const value = flags[1]
-    console.log(mode)
     if (mode && mode === "--mode" || mode === "-m") {
         return value
     }
