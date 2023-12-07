@@ -6,7 +6,7 @@
   "main": "./index.js",
   "description": "Sql schema to typescript, type file generator",
   "scripts": {
-    "generate": "node ./index.js"
+    "generate": "npx tsx ./index.ts"
   },
   "bin": {
     "bioquery-typegenerator": "./index.js"
