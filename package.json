@@ -5,8 +5,12 @@
   "scripts": {
     "generate": "npx tsx ./index.ts"
   },
+  "respository": {
+    "type": "git",
+    "url": "https://github.com/NM711/BioQueryParserTypeGenerator"
+  },
   "dependencies": {
     "@types/node": "^20.9.0"
   },
-  "version": "1.0.1"
+  "version": "1.0.2"
 }
