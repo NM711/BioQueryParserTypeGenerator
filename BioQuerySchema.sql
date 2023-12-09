@@ -9,6 +9,12 @@ CREATE TABLE "user"(
   picture TEXT DEFAULT NULL
 );
 
+CREATE TYPE "person_type" AS (first_name VARCHAR(50),
+                last_name VARCHAR(50),age INT,
+    auth "authority"
+);
+
+
 CREATE TABLE "post" (
   id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
   author_id UUID REFERENCES "user"(id),
@@ -26,6 +32,7 @@ CREATE TABLE "post_comment" (
   content TEXT DEFAULT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+  randomObj "person_type" UNIQUE
 );
 
 CREATE TABLE "post_upvote" (
@@ -52,7 +59,12 @@ CREATE TABLE "community" (
 -- CUSTOM authority holds no real value, its just so that admins and owners can create cool roles
 -- that say cool stuff.
 
-CREATE TYPE "authority" AS ENUM ('OWNER', 'ADMINISTRATOR', 'MEMBER', 'CUSTOM');
+CREATE TYPE "authority" AS ENUM (
+  'OWNER',
+  'ADMINISTRATOR',
+  'MEMBER',
+  'CUSTOM'
+);
 
 CREATE TABLE "community_role" (
   id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),

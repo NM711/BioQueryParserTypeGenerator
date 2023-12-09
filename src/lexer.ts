@@ -1,37 +1,25 @@
 import LexerTypes from "../types/lexer.types"
-import { formatTypeName } from "./utils"
+import { fieldSplitFormatter, formatTypeName, schemaRegex } from "./utils"
 
 class SchemaLexer {
-  private tokens: LexerTypes.Token[]
-  private regex: LexerTypes.Regex
-  private declaredColumnKeywords: Set<LexerTypes.KeywordKey>
-  private sqlTypes: typeof LexerTypes.sqlTypes & Record<string, string>
-  private sqlTypesKeys: string[]
+  private tokens: LexerTypes.Token[];
+  private declaredColumnKeywords: Set<LexerTypes.KeywordKey>;
+  private sqlTypes: typeof LexerTypes.sqlTypes & Record<string, string>;
+  private sqlTypesKeys: string[];
+  private sqlTypesKeysSet: Set<string>;
 
   constructor () {
-    this.regex = this.generateRegex
-    this.tokens = []
-    this.declaredColumnKeywords = new Set(Object.keys(LexerTypes.Keywords) as LexerTypes.KeywordKey[])
-    this.sqlTypes = LexerTypes.sqlTypes
-    this.sqlTypesKeys = Object.keys(this.sqlTypes)
-  }
+    this.tokens = [];
+    this.declaredColumnKeywords = new Set(Object.keys(LexerTypes.Keywords) as LexerTypes.KeywordKey[]);
+    this.sqlTypes = LexerTypes.sqlTypes;
+    this.sqlTypesKeys = Object.keys(this.sqlTypes);
+    this.sqlTypesKeysSet = new Set(Object.keys(this.sqlTypes));
+  };
 
-  /**
-  * @method generateRegex
-  * @description
-  * Private gette method used for the intialization of this.regex, this way I dont bloat the constructor.
-  * The provided regex data is used for parsing the schema and breaking up the relevant parts into smaller, more digestable
-  * pieces.
-  * */
-
-  private get generateRegex(): LexerTypes.Regex {
-    return {
-      table: /CREATE TABLE(.*?)\(/g,
-      column: /[,\n]/g,
-      custom_type: /CREATE TYPE\s/g,
-      comment: /--(.*?)\n/g,
-    }
-  }
+  private reloadSqlTypesKeysSet(): this {
+    this.sqlTypesKeysSet = new Set(this.sqlTypesKeys)
+    return this;
+  };
 
   /**
    * @method updateSqlTypesKeys
@@ -42,9 +30,9 @@ class SchemaLexer {
    */
 
   private set updateSqlTypesKeys(value: string | string[]) {
-    if (typeof value === "object") this.sqlTypesKeys.push(...value)
-    else this.sqlTypesKeys.push(value)
-  }
+    if (typeof value === "object") this.sqlTypesKeys.push(...value);
+    else this.sqlTypesKeys.push(value);
+  };
 
   /**
    * @method commentRemoverAndStringFormatter
@@ -59,8 +47,8 @@ class SchemaLexer {
     // removes all whitespace that occurs within the instance of new line
     unformatted = unformatted.replace(/^\s+/gm, "")
 
-    if (this.regex.comment.test(unformatted)) {
-        unformatted = unformatted.replace(this.regex.comment, "\n");
+    if (schemaRegex.comment.test(unformatted)) {
+        unformatted = unformatted.replace(schemaRegex.comment, "\n");
     };
 
     // Must deliver a formatted string that the tokenizers can read
@@ -85,6 +73,8 @@ class SchemaLexer {
 
   private tokenizeCustomType (decalaredCustomType: string[]) {
     for (const customType of decalaredCustomType) {
+      const typeFieldArr: LexerTypes.CustomTokenTypeField[] = [];
+
       const brokenDownString = customType.split(/CREATE TYPE(.*?)AS/g)
       const typeName = brokenDownString[1]
       if (!brokenDownString[2]) continue
@@ -93,32 +83,57 @@ class SchemaLexer {
       const declaredType = restOfString.shift()
 
       if (!declaredType) continue
+
       const formattedCustomTypeName = formatTypeName(typeName.trim().replace(/["]/g, ""))
       this.updateSqlTypesKeys = typeName.trim()
-
-      const typeValuesThatWereSet = restOfString.filter(f => f !== "").map(t => {
-        if (typeof t === "number") return Number(t)
-        return `"${t}"`
-      }) as string[] | number[]
-
-
+      
       switch (declaredType) {
-       case LexerTypes.TokenType.ENUM || LexerTypes.TokenType.ENUM.toLowerCase():
-         this.tokens.push({
-           token_id: LexerTypes.TokenType.ENUM,
-           name: formattedCustomTypeName,
-           value: typeValuesThatWereSet
-         })
+       
+        case LexerTypes.TokenType.ENUM || LexerTypes.TokenType.ENUM.toLowerCase():
+          const typeValuesThatWereSet = restOfString.filter(f => f !== "").map(t => {
+            if (typeof t === "number") return Number(t)
+            return `"${t}"`
+          }) as string[] | number[]
+
+          this.tokens.push({
+            token_id: LexerTypes.TokenType.ENUM,
+            name: formattedCustomTypeName,
+            value: typeValuesThatWereSet
+          })
         break
-        // still needs to be implemented, will work on it depending if i need it for my project and what not
-        case LexerTypes.TokenType.RANGE || LexerTypes.TokenType.RANGE.toLowerCase():
-        break
+
+
+       // case LexerTypes.TokenType.RANGE || LexerTypes.TokenType.RANGE.toLowerCase():
+       // break
+
+
         default: {
-        // look for a custom type that is not an enum or range, etc.
-        }
-      }
-    }
-  }
+          const fields = fieldSplitFormatter(brokenDownString[2]);
+          for (const field of fields) {
+            const trimmedField = field.replace(/[(),;]/g, "").trim();
+            if (trimmedField.length === 1) continue;
+            const splitField = trimmedField.split(" ");
+
+            if (!splitField[0] || !splitField[1]) continue;
+            
+            const fieldName = splitField[0];
+            const fieldType = splitField[1];
+            
+            typeFieldArr.push({
+              name: fieldName,
+              type: fieldType
+            });
+          };
+
+          this.tokens.push({
+            token_id: LexerTypes.TokenType.CUSTOM_TYPE,
+            name: formattedCustomTypeName,
+            value: typeFieldArr
+          });
+        };
+      };
+    };
+  };
 
   private tokenizeColumns (tableColumns: string[]): LexerTypes.ColumnDataToken[] {
      const columnTokens: LexerTypes.ColumnDataToken[] = []
@@ -131,7 +146,7 @@ class SchemaLexer {
 
         let setOfColumnConstraints: Set<LexerTypes.KeywordKey> = new Set()
         let columnType: string = ""
-        const sqlTypesKeysSet = new Set(this.sqlTypesKeys)
+        this.reloadSqlTypesKeysSet();
         // word level iteration
         for (let i = 0; i <= splitCol.length; i++) {
           const word = splitCol[i] ? splitCol[i].trim() : ""
@@ -139,14 +154,16 @@ class SchemaLexer {
 
           const unionizedKeyword = `${word} ${nextWord}` as LexerTypes.KeywordKey
 
-          if (sqlTypesKeysSet.has(word)) columnType = word
+          if (this.sqlTypesKeysSet.has(word)) { 
+            columnType = word
+          }
 
           if (this.declaredColumnKeywords.has(word as LexerTypes.KeywordKey)) {
-              setOfColumnConstraints.add(word as LexerTypes.KeywordKey)
+            setOfColumnConstraints.add(word as LexerTypes.KeywordKey)
           }
 
           if (this.declaredColumnKeywords.has(unionizedKeyword)) {
-             setOfColumnConstraints.add(unionizedKeyword)
+            setOfColumnConstraints.add(unionizedKeyword)
           }
 
       }
@@ -165,12 +182,11 @@ class SchemaLexer {
   private tokenizeTablesAndColumns (tables: string[]) {
     // table level iteration
     for (const table of tables) {
-      const splitTable = table.split(this.regex.table)
+      const splitTable = table.split(schemaRegex.table)
       const tableName = splitTable[1].trim()
       // d+ = one or more digits compared to \d digit
-      const tableColumns = splitTable[2].replace(/\(\d+\)/g, "").split(this.regex.column)
+      const tableColumns = fieldSplitFormatter(splitTable[2])
       const columnTokens = this.tokenizeColumns(tableColumns)
-
       this.tokens.push({
         token_id: LexerTypes.TokenType.TABLE,
         name: tableName.replace(/["]/g, ""),
@@ -179,8 +195,8 @@ class SchemaLexer {
   }
 }
 
-  private matchRegex(key: keyof typeof this.regex, dataToTest: string): boolean {
-    const isMatch = dataToTest.match(this.regex[key])
+  private matchRegex(key: keyof typeof schemaRegex, dataToTest: string): boolean {
+    const isMatch = dataToTest.match(schemaRegex[key])
     if (!isMatch) return false
     return true
   }
@@ -238,7 +254,7 @@ class SchemaLexer {
       }
     }
   }
-  
+
   /**
    * @method retrieveSqlTypes
    * @description

@@ -18,7 +18,7 @@ class SchemaParser {
 
   private readCmdFlag (): string | null {
     const flags = process.argv.slice(2)
- 
+
     const mode = flags[0]
     const value = flags[1]
     if (mode && mode === "--mode" || mode === "-m") {
