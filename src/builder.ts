@@ -44,56 +44,74 @@ class TypeBuilderTS {
   private tsTypesBuilder({ name, values, mode }: BuilderTypes.TSBuilderParams): string {
     switch (mode) {
       case "INTERFACE": {
-        return `\nexport interface ${name} {\n${values}\n}\n`
-      }
+        return `\nexport interface ${name} {\n${values}\n}\n`;
+      };
 
       case "TYPE": {
-        return `\nexport type ${name} = ${values}\n`
-      }
+        return `\nexport type ${name} = ${values}\n`;
+      };
 
       default: {
-        return "NO VALID MODE PROVIDED!"
-      }
-    }
-  }
+        return "NO VALID MODE PROVIDED!";
+      };
+    };
+  };
+
+  private userDefinedObjectTypeInterfaceBuilder (objType: LexerTypes.TypeCustomToken): void {
+    const objTypeInterfaceFields: string[] = []
+    for (const field of objType.value) {
+      const tsType = this.sqlTypes[field.type];
+      if (!tsType) throw Error("Something went wrong while looking up the given type!");
+      let interfaceField = `  ${field.name}: ${tsType}`;
+        
+      objTypeInterfaceFields.push(interfaceField);
+    };
+    
+    const objTypeInterface = this.tsTypesBuilder({
+      name: objType.name,
+      values: objTypeInterfaceFields.join("\n"),
+      mode: "INTERFACE"
+    });
+    this.built.push(objTypeInterface)
+  };
 
   private tableInterfaceBuilder (table: LexerTypes.TableDataToken): void {
-    let tableInterfaceFields: string[] = []
+    const tableInterfaceFields: string[] = [];
     for (const column of table.columns) {
-      const tsType = this.sqlTypes[column.type]
-      if (!tsType) throw Error("Something went wrong while looking up the given type!")
-      let interfaceField = `  ${column.name}?: ${tsType}`
+      const tsType = this.sqlTypes[column.type];
+      if (!tsType) throw Error("Something went wrong while looking up the given type!");
+      let interfaceField = `  ${column.name}?: ${tsType}`;
       // for the kysley mode, this switch will have a greater role
       switch (true) {
         case column.constraints.has("UNIQUE") || column.constraints.has("NOT NULL"): {
-          interfaceField = interfaceField.replace("?", "")
-        }
+          interfaceField = interfaceField.replace("?", "");
+        };
 
         case column.constraints.has("DEFAULT"): {
           if (this.kysleyBuildMode) {
-            interfaceField += ` | Generated<${tsType}>`
-          }
-        }
-      }
+            interfaceField += ` | Generated<${tsType}>`;
+          };
+        };
+      };
 
-      tableInterfaceFields.push(interfaceField)
-    }
-    const tableTypeName = `${formatTypeName(table.name)}Table`
-    const tableInterface = this.tsTypesBuilder({ name: tableTypeName, values: tableInterfaceFields.join("\n"), mode: "INTERFACE" })
-    this.built.push(tableInterface)
+      tableInterfaceFields.push(interfaceField);
+    };
+    const tableTypeName = `${formatTypeName(table.name)}Table`;
+    const tableInterface = this.tsTypesBuilder({ name: tableTypeName, values: tableInterfaceFields.join("\n"), mode: "INTERFACE" });
+    this.built.push(tableInterface);
 
     // find a way to seperate second upper case with underscore.
-    this.databaseInterfaceFields.push(`  ${table.name.toLowerCase()}: ${tableTypeName}`)
-  }
+    this.databaseInterfaceFields.push(`  ${table.name.toLowerCase()}: ${tableTypeName}`);
+  };
 
-  /**
+  /***
   * @method buildTypes 
   * @param tokens
   * @type LexerTypes.Token[]
   * @description
   * Public method that parses all of the tokens built by the lexer, in order to generate valid typescript
   * interfaces and types.
-  * */
+  **/
 
   public buildTypes (tokens: LexerTypes.Token[]) {
     for (const token of tokens) {
@@ -108,13 +126,14 @@ class TypeBuilderTS {
           break
         }
 
-        case LexerTypes.TokenType.RANGE: {
-          break
-        }
+        //case LexerTypes.TokenType.RANGE: {
+        //  break
+        //}
 
         case LexerTypes.TokenType.CUSTOM_TYPE: {
-          break
-        }
+          this.userDefinedObjectTypeInterfaceBuilder(token);
+          break;
+        };
 
         case LexerTypes.TokenType.TABLE: {
           this.tableInterfaceBuilder(token)

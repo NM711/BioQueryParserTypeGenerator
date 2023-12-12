@@ -93,7 +93,7 @@ export interface Database {
 
 ### Postgresql  With Enum Type Example:
 
-#### SQL
+#### PSQL
 ```sql
 CREATE TYPE "authority" AS ENUM ('OWNER', 'ADMINISTRATOR', 'MEMBER', 'CUSTOM');
 ```
@@ -106,6 +106,52 @@ CREATE TYPE "authority" AS ENUM ('OWNER', 'ADMINISTRATOR', 'MEMBER', 'CUSTOM');
 As you can see, instead of it being converted into a typescript enum. It is converted into a typescript string literal type.
 
 In the future, I plan to implement conversion for other user defined types.
+
+### Postgresql With User Defined Object Types Example:
+
+#### PSQL
+
+```sql
+CREATE TYPE "person_type" AS (
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  age INT,
+  auth "authority"
+);
+
+CREATE TABLE "post_comment" (
+  id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),
+  author_id UUID REFERENCES "user"(id) ON DELETE CASCADE,
+  post_id UUID REFERENCES "post"(id) ON DELETE CASCADE,
+  content TEXT DEFAULT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+  randomObj "person_type" UNIQUE
+);
+```
+
+#### TS
+
+```ts
+export interface PersonType {
+  first_name: string
+  last_name: string
+  age: number
+  auth: Authority
+}
+
+export interface PostCommentTable {
+  id: string
+  author_id?: string
+  post_id?: string
+  content?: string
+  created_at: Date | string
+  updated_at: Date | string
+  randomObj: PersonType
+}
+```
+
+As you can see even the defined and assigned enums get generated and added to the "PersonType" user defined object type.
 
 ## Flags
 
@@ -121,7 +167,7 @@ OR
   npx bioquery-typegenerator -m kysley
 ```
 
-#### SQL
+#### PSQL
 ```sql
 -- BioQuerySchema.sql
 CREATE TABLE "user"(
@@ -167,5 +213,3 @@ export interface PostTable {
 ```
 
 For the time being im only making use of the <Generated> type from kysley, and im still implementing a way to provide an automatic import for the necessary types. But like I said above, this is still a work in progress.
-
-
