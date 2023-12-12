@@ -9,9 +9,10 @@ CREATE TABLE "user"(
   picture TEXT DEFAULT NULL
 );
 
-CREATE TYPE "person_type" AS (first_name VARCHAR(50),
-                last_name VARCHAR(50),age INT,
-    auth "authority"
+CREATE TYPE "person_type" AS (
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),age INT,
+  auth "authority"
 );
 
 
