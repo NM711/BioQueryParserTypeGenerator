@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "test#1": "cd $(pwd)/test/test#1 && npx tsx ./test.ts"
+  },
+
+  "dependencies": {
+    "@types/node": "^20.11.24"
+  }
+}
