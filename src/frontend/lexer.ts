@@ -1,4 +1,5 @@
-import { Token, LineInfo, TokenIdentifiers, LexerState, SyntaxError, LexerCode } from "../../types/lexer.types";
+import { SyntaxError } from "../errors/errors";
+import { Token, LineInfo, TokenIdentifiers, LexerState, LexerCode } from "../../types/lexer.types";
 
 class Lexer {
   private tokens: Token[];
@@ -47,6 +48,9 @@ class Lexer {
     this.lookup.set("ZONE", TokenIdentifiers.ZONE);
     this.lookup.set("WITH", TokenIdentifiers.WITH);
     this.lookup.set("ALTER", TokenIdentifiers.ALTER);
+    this.lookup.set("UNIQUE", TokenIdentifiers.UNIQUE);
+    this.lookup.set("PRIMARY", TokenIdentifiers.PRIMARY);
+    this.lookup.set("KEY", TokenIdentifiers.KEY);
   };
 
   private isDigit(v: string): boolean {
@@ -65,6 +69,7 @@ class Lexer {
     ++this.info.col
     if (this.peek() === "\n") {
       ++this.info.row;
+      this.info.col = 1;
     };
   };
 
@@ -108,7 +113,6 @@ class Lexer {
     while (this.peek() !== undefined && condition()) {
       this.updateLineInfo();
       str += this.peek();
-      console.log(str)
       this.eat();
     };
 
@@ -122,7 +126,6 @@ class Lexer {
   };
 
   private handleLiteralOrKW() {
-
     let value: string = "";
 
     while (this.isDigit(this.peek()) || this.isAlpha(this.peek())) {
@@ -211,7 +214,6 @@ class Lexer {
       };
 
       if (this.state.code === LexerCode.LEXER_UNEXPECTED_ERROR) {
-        console.log(this.tokens)
         throw new SyntaxError(`Unexpected at "${this.state.value}"`, this.info);
       };
     };

@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import Lexer from "../../src/frontend/lexer";
+import Parser from "../../src/frontend/parser";
 
 function main () {
   const data = fs.readFileSync("./test.sql", { encoding: "utf8" });
 
   const lexer = new Lexer();
-
-  console.log(data.split(""))
+  const parser = new Parser();
 
   lexer.setInput = data;
 
@@ -14,7 +14,9 @@ function main () {
 
   const token = lexer.retrieveTokens;
 
-  console.log(token)
+  parser.setTokens = token;
+
+  const tree = parser.generateAST();
 };
 
 main();

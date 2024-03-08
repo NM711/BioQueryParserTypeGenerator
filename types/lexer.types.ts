@@ -34,18 +34,15 @@ export enum TokenIdentifiers {
   ZONE,
   WITH,
   DEFAULT,
+  UNIQUE,
+  PRIMARY,
+  KEY,
   NOT,
   LEFT_PARENTHESIS,
   RIGHT_PARENTHESIS,
   SEMICOLON,
   SEPERATOR,
   EQUAL
-};
-
-export class SyntaxError extends Error {
-  constructor (message: string, info: LineInfo) {
-    super(` >>>>>> ${message} (col: ${info.col}, row: ${info.row})`);
-  };
 };
 
 export type LineInfo = {
