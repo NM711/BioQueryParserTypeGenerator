@@ -18,8 +18,8 @@ class Lexer {
 
     this.lookup = new Map();
     this.info = {
-      col: 1,
-      row: 1
+      line: 1,
+      char: 1
     };
 
     this.initLookup();
@@ -31,6 +31,11 @@ class Lexer {
     this.lookup.set("TYPE", TokenIdentifiers.TYPE);
     this.lookup.set("DEFAULT", TokenIdentifiers.DEFAULT);
     this.lookup.set("NOT", TokenIdentifiers.NOT);
+    this.lookup.set("ON", TokenIdentifiers.ON);
+    this.lookup.set("DELETE", TokenIdentifiers.DELETE);
+    this.lookup.set("UPDATE", TokenIdentifiers.UPDATE);
+    this.lookup.set("CASCADE", TokenIdentifiers.CASCADE);
+    this.lookup.set("BYTEA", TokenIdentifiers.BYTEA);
     this.lookup.set("AS", TokenIdentifiers.AS);
     this.lookup.set("NULL", TokenIdentifiers.NULL);
     this.lookup.set("VARCHAR", TokenIdentifiers.VARCHAR);
@@ -38,10 +43,14 @@ class Lexer {
     this.lookup.set("TEXT", TokenIdentifiers.TEXT);
     this.lookup.set("INT", TokenIdentifiers.INT);
     this.lookup.set("INTEGER", TokenIdentifiers.INT);
+    this.lookup.set("BIGINT", TokenIdentifiers.INT);
     this.lookup.set("REAL", TokenIdentifiers.REAL);
     this.lookup.set("FLOAT", TokenIdentifiers.FLOAT);
+    this.lookup.set("UUID", TokenIdentifiers.UUID);
     this.lookup.set("TIMESTAMP", TokenIdentifiers.TIMESTAMP);
-    this.lookup.set("ENUM" ,TokenIdentifiers.ENUM)
+    this.lookup.set("TIMESTAMPZ", TokenIdentifiers.TIMESTAMPZ);
+    this.lookup.set("REFERENCES", TokenIdentifiers.REFERENCES);
+    this.lookup.set("ENUM" ,TokenIdentifiers.ENUM);
     this.lookup.set("RANGE", TokenIdentifiers.RANGE);
     this.lookup.set("EXTENSION", TokenIdentifiers.EXTENSION);
     this.lookup.set("TIME", TokenIdentifiers.TIME);
@@ -66,18 +75,26 @@ class Lexer {
   };
 
   private updateLineInfo(): void {
-    ++this.info.col
+    ++this.info.char
     if (this.peek() === "\n") {
-      ++this.info.row;
-      this.info.col = 1;
+      ++this.info.line;
+      this.info.char = 1;
     };
   };
 
   private pushToken(id: TokenIdentifiers, lexeme: string = this.peek()): void {
+
+    // just realized, javascript passes objects by reference and not by value. Which makes sense, so I cant just say info: this.info, due to this.info
+    // being a reference whose underlying fields will change overtime. If I set it that way, every info field will always be equal to the latest version of
+    // this.info, rather than a copy of the value before it was updated into something new.
+  
     this.tokens.push({
       id,
       lexeme,
-      info: this.info
+      info: {
+        line: this.info.line,
+        char: this.info.char
+      }
     });
   };
 
@@ -202,7 +219,7 @@ class Lexer {
   public tokenize(): void {
     while (this.input.length > 0) {
       this.updateLineInfo();
-
+      
       if (this.isAlpha(this.peek()) || this.isDigit(this.peek())) {
         this.handleLiteralOrKW();
       } else if (this.isSpecial(this.peek())) {

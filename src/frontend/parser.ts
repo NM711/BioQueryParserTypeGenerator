@@ -1,6 +1,6 @@
 import { SyntaxError } from "../errors/errors";
 import { TokenIdentifiers, Token } from "../../types/lexer.types";
-import type { Constraint, IdentifierNode, LiteralNode, Root, TableColumnNode, TableDefinitionNode, TreeNode } from "../../types/ast.types";
+import type { Constraint, CreateTypeProcedureNode, EnumDefinitionNode, FieldTypeNode, IdentifierNode, LiteralNode, ObjectTypeDefinitionNode, Root, TableColumnNode, TableColumnTypeNode, TableDefinitionNode, TreeNode, TypeDefinitionNode } from "../../types/ast.types";
 
 class Parser {
   private tokens: Token[];
@@ -52,6 +52,15 @@ class Parser {
         kind: "LITERAL",
         value: this.peek().lexeme,
         type: "STRING"
+      };
+
+      // since default can be set to null.
+
+      case TokenIdentifiers.NULL:
+      return {
+        kind: "LITERAL",
+        value: this.peek().lexeme,
+        type: "NULL"  
       };
 
       default:
@@ -158,6 +167,54 @@ class Parser {
         };
       };
 
+      case TokenIdentifiers.ON: {
+        this.eat();
+
+        if (this.peek().lexeme == "DELETE" || this.peek().lexeme == "UPDATE") {
+          const action = this.peek().lexeme;
+
+          this.eat();
+
+          this.expected(TokenIdentifiers.CASCADE, "Cascade");
+
+          return {
+            name: "ACTION",
+            action,
+            event: "CASCADE"
+          };
+        } else {
+          throw new SyntaxError("Expected a valid action or constraint!", this.peek().info); 
+        };
+      };
+
+      // implement one for foreign keys as well.
+
+      case TokenIdentifiers.REFERENCES: {
+        this.eat();
+
+        const tableIdent = this.parsePrimary() as IdentifierNode;
+        this.expected(TokenIdentifiers.IDENT, "Referenced Table Identifier");
+
+        if (this.peek().id == TokenIdentifiers.LEFT_PARENTHESIS) {
+          this.eat();
+
+          const columnIdent = this.parsePrimary() as IdentifierNode;
+          this.expected(TokenIdentifiers.IDENT, "Referenced Column Identifier");
+          this.expected(TokenIdentifiers.RIGHT_PARENTHESIS, ")");
+        
+          return {
+            name: "REFERENCES",
+            refTable: tableIdent,
+            refColumn: columnIdent
+          };
+        };
+        
+        return {
+          name: "REFERENCES",
+          refTable: tableIdent,
+        };
+      };
+
       default: {
         throw new SyntaxError(`Unexpected attribute or constraint found in "${this.peek().lexeme}"`, this.peek().info);
       };
@@ -168,23 +225,29 @@ class Parser {
     const columns: TableColumnNode[] = [];
 
     while (this.peek().id !== TokenIdentifiers.RIGHT_PARENTHESIS) {
-      const colIdent = this.expected(TokenIdentifiers.IDENT, "Identifier");
+      const colIdent = this.parsePrimary();
+      this.expected(TokenIdentifiers.IDENT, "Identifier");
 
       // expect col type, note this can be a custom type not necessarily only primitive
 
-      const colType = this.peek();
-      this.eat();
+      const colType = this.parseFieldType();
       
       const column: TableColumnNode = {
         kind: "COLUMN",
-        name: colIdent.lexeme,
-        type: colType.lexeme,
+        name: colIdent as IdentifierNode,
+        type: colType,
         constraints: []
       };
 
       while (this.peek().id !== TokenIdentifiers.RIGHT_PARENTHESIS && this.peek().id !== TokenIdentifiers.SEPERATOR) {
         column.constraints.push(this.parseColumnConstraints());
       };
+
+      if (this.peek().id == TokenIdentifiers.SEPERATOR) {
+        this.eat();
+      };
+
+      columns.push(column);
     };
 
     return columns;
@@ -196,7 +259,8 @@ class Parser {
 
   private parseTable(): TableDefinitionNode {
     this.eat();
-    const ident = this.expected(TokenIdentifiers.IDENT, "Identifier");
+    const ident = this.parsePrimary();
+    this.expected(TokenIdentifiers.IDENT, "Identifier");
     this.expected(TokenIdentifiers.LEFT_PARENTHESIS, "(");
 
     const columns = this.parseColumns();
@@ -205,18 +269,152 @@ class Parser {
     this.expected(TokenIdentifiers.SEMICOLON, ";");
 
     return {
-      name: ident.lexeme,
+      name: ident as IdentifierNode,
       columns
     };
   };
 
- /**
-  * Parses types in schema file (note: custom object types only work for postgresql) 
-  */
+  private parseFieldType(): FieldTypeNode {
 
-  private parseType(): TreeNode {
+    const tableColType: FieldTypeNode = {
+      kind: "FIELD_TYPE",
+      name: this.peek().lexeme
+    };
+    
+    switch (this.peek().id) {
+      case TokenIdentifiers.VARCHAR:    
+        this.eat();
+
+        this.expected(TokenIdentifiers.LEFT_PARENTHESIS, "(");
+        const varcharLiteral = this.parsePrimary();
+        this.eat();
+        this.expected(TokenIdentifiers.RIGHT_PARENTHESIS, ")");
+        tableColType.additionalDetails = [];
+        tableColType.additionalDetails.push(varcharLiteral);
+
+      return tableColType;
+
+      case TokenIdentifiers.TEXT:
+      case TokenIdentifiers.TIMESTAMP:
+      case TokenIdentifiers.TIMESTAMPZ:
+      case TokenIdentifiers.DOUBLE:
+      case TokenIdentifiers.UUID:
+      case TokenIdentifiers.INT:
+      case TokenIdentifiers.BYTEA:
+      this.eat();        
+      return tableColType;
+
+      default:
+        // if its an ident we suppose its a custom type, or enum, etc.
+        
+        this.expected(TokenIdentifiers.IDENT, "Type Identifier");
+
+      return tableColType;
+    };
   };
 
+  private parseEnumType(ident: IdentifierNode): EnumDefinitionNode {
+    this.eat();
+   
+    this.expected(TokenIdentifiers.LEFT_PARENTHESIS, "(");
+
+
+    const values: TreeNode[] = [];
+
+    while (this.peek().id != TokenIdentifiers.RIGHT_PARENTHESIS) {
+
+      values.push(this.parsePrimary());
+      this.eat();
+
+      if (this.peek().id == TokenIdentifiers.SEPERATOR) {
+        this.eat();
+      };
+    };
+
+    this.eat();
+
+    this.expected(TokenIdentifiers.SEMICOLON, ";");
+    return {
+      kind: "ENUM",
+      name: ident,
+      values
+    };
+   };
+
+  private parseObjectType(ident: IdentifierNode): ObjectTypeDefinitionNode {
+    this.eat();
+
+    const fields: { name: IdentifierNode; type: FieldTypeNode }[] = [];
+
+    while (this.peek().id != TokenIdentifiers.RIGHT_PARENTHESIS) {
+
+      const field = this.parsePrimary() as IdentifierNode;
+
+      this.expected(TokenIdentifiers.IDENT, "Object Field Identifier");
+
+      const fieldType = this.parseFieldType();
+
+      fields.push({
+        name: field,
+        type: fieldType
+      });
+    };
+
+    this.eat();
+
+    this.expected(TokenIdentifiers.SEMICOLON, ";");
+
+    return {
+      kind: "OBJECT_TYPE",
+      name: ident,
+      fields
+    };
+  };
+
+  
+  /**
+   * Parses types in schema file (note: custom object types only work for postgresql) 
+   */
+
+  private parseType(): TreeNode {
+    this.eat();
+
+    const typeIdent = this.parsePrimary() as IdentifierNode;
+    this.expected(TokenIdentifiers.IDENT, "Type Identifier");
+
+    // Note that shell types end right after the ident, so if we want to implement that.
+    // Then we must add a check.
+    
+    this.expected(TokenIdentifiers.AS, "AS");
+    
+    const generateProcTypeObj = (t: TypeDefinitionNode): CreateTypeProcedureNode => {
+      return {
+        kind: "PROCEDURE",
+        procedure: "CREATE",
+        defining: "TYPE",
+        definition: t
+      };
+    }  
+
+    switch (this.peek().id) {
+      case TokenIdentifiers.ENUM:
+      return generateProcTypeObj(this.parseEnumType(typeIdent));
+      
+      case TokenIdentifiers.RANGE:
+
+      break;
+
+
+      // object type entry
+      case TokenIdentifiers.LEFT_PARENTHESIS:
+      return generateProcTypeObj(this.parseObjectType(typeIdent));
+
+      default:
+      throw new SyntaxError("Unexpected Kind of Type!", this.peek().info); 
+    };
+  };
+
+  
   private parseCreate(): TreeNode {
     this.eat();
     switch (this.peek().id) {
@@ -269,12 +467,13 @@ class Parser {
       while (this.tokens.length > 0) {
         root.body.push(this.parse())
       };
+
+      return root;
     } catch (e) {
       console.log(root.body);
 
       if (e instanceof SyntaxError) {
-        console.error(e.message);
-        console.error(e.stack)
+       console.error(e.stack)
       };
 
       process.exit(1);

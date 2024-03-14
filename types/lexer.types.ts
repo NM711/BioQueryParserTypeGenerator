@@ -26,9 +26,12 @@ export enum TokenIdentifiers {
   FLOAT,
   TEXT,
   TIMESTAMP,
+  TIMESTAMPZ,
   INT,
   DOUBLE,
   REAL,
+  UUID,
+  BYTEA,
   NULL,
   TIME,
   ZONE,
@@ -38,6 +41,11 @@ export enum TokenIdentifiers {
   PRIMARY,
   KEY,
   NOT,
+  ON,
+  DELETE,
+  UPDATE,
+  CASCADE,
+  REFERENCES,
   LEFT_PARENTHESIS,
   RIGHT_PARENTHESIS,
   SEMICOLON,
@@ -46,8 +54,8 @@ export enum TokenIdentifiers {
 };
 
 export type LineInfo = {
-  col: number;
-  row: number;
+  char: number;
+  line: number;
 };
 
 export type Token = {

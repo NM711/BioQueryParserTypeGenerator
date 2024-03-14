@@ -27,9 +27,9 @@ CREATE TABLE "post_tag" (
 
 -- CONSTRAINT FOR POST_TAG
 
-ALTER TABLE "post_tag"
-ADD CONSTRAINT unique_tag_per_post_constraint
-UNIQUE(post_id, name);
+-- ALTER TABLE "post_tag"
+-- ADD CONSTRAINT unique_tag_per_post_constraint
+-- UNIQUE(post_id, name);
 
 
 CREATE TABLE "post_comment" (
@@ -74,13 +74,13 @@ CREATE TABLE "community_role" (
   role_authority "authority" NOT NULL
 );
 
-ALTER TABLE "community_role"
-ADD CONSTRAINT unique_authority_constraint
-CHECK (
-  (role_authority = 'OWNER' OR role_authority = 'ADMINISTRATOR' OR role_authority = 'MEMBER')
-  OR
-  (role_authority = 'CUSTOM')
-);
+-- ALTER TABLE "community_role"
+-- ADD CONSTRAINT unique_authority_constraint
+-- CHECK (
+--  (role_authority = 'OWNER' OR role_authority = 'ADMINISTRATOR' OR role_authority = 'MEMBER')
+--  OR
+--  (role_authority = 'CUSTOM')
+-- );
 
 CREATE TABLE "community_member" (
   id UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4(),

@@ -3,23 +3,55 @@ interface DefaultConstraint {
   value: TreeNode;
 };
 
-export type Constraint = { name: string } | DefaultConstraint;
+interface ReferenceConstraint {
+  name: "REFERENCES";
+  refTable: IdentifierNode;
+  refColumn?: IdentifierNode;
+};
+
+interface ActionConstraint {
+  name: "ACTION";
+  action: string;
+  event: string;
+};
+
+export type Constraint = { name: string } | ActionConstraint | ReferenceConstraint | DefaultConstraint;
+
+export interface FieldTypeNode {
+  kind: "FIELD_TYPE";
+  name: string;
+  additionalDetails?: TreeNode[];
+};
 
 export interface TableColumnNode {
   kind: "COLUMN";
-  name: string;
-  type: string;
+  name: IdentifierNode;
+  type: FieldTypeNode;
   constraints: Constraint[];
 };
 
 export interface TableDefinitionNode {
-  name: string;
+  name: IdentifierNode;
   columns: TableColumnNode[];
 };
 
-export interface TypeDefinitionNode {
-
+export interface EnumDefinitionNode {
+  kind: "ENUM";
+  name: IdentifierNode;
+  values: TreeNode[];
 };
+
+export interface RangeDefinitionNode {
+  
+};
+
+export interface ObjectTypeDefinitionNode {
+  kind: "OBJECT_TYPE";
+  name: IdentifierNode;
+  fields: {name: IdentifierNode; type: FieldTypeNode}[];
+};
+
+export type TypeDefinitionNode = EnumDefinitionNode | RangeDefinitionNode | ObjectTypeDefinitionNode; 
 
 export interface FunctionCallNode {
   kind: "FUNCTION_CALL"

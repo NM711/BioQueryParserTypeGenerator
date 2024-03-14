@@ -17,6 +17,8 @@ function main () {
   parser.setTokens = token;
 
   const tree = parser.generateAST();
+
+  console.log(tree);
 };
 
 main();
