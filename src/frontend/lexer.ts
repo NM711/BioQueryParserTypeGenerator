@@ -47,6 +47,7 @@ class Lexer {
     this.lookup.set("REAL", TokenIdentifiers.REAL);
     this.lookup.set("FLOAT", TokenIdentifiers.FLOAT);
     this.lookup.set("UUID", TokenIdentifiers.UUID);
+    this.lookup.set("BOOLEAN", TokenIdentifiers.BOOLEAN);
     this.lookup.set("TIMESTAMP", TokenIdentifiers.TIMESTAMP);
     this.lookup.set("TIMESTAMPZ", TokenIdentifiers.TIMESTAMPZ);
     this.lookup.set("REFERENCES", TokenIdentifiers.REFERENCES);

@@ -28,6 +28,7 @@ export enum TokenIdentifiers {
   TIMESTAMP,
   TIMESTAMPZ,
   INT,
+  BOOLEAN,
   DOUBLE,
   REAL,
   UUID,

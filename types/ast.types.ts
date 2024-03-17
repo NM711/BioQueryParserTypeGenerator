@@ -1,4 +1,4 @@
-interface DefaultConstraint {
+export interface DefaultConstraint {
   name: "DEFAULT";
   value: TreeNode;
 };
@@ -42,7 +42,7 @@ export interface EnumDefinitionNode {
 };
 
 export interface RangeDefinitionNode {
-  
+  kind: "RANGE";
 };
 
 export interface ObjectTypeDefinitionNode {

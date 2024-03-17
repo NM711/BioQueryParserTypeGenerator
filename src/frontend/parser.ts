@@ -1,6 +1,6 @@
 import { SyntaxError } from "../errors/errors";
 import { TokenIdentifiers, Token } from "../../types/lexer.types";
-import type { Constraint, CreateTypeProcedureNode, EnumDefinitionNode, FieldTypeNode, IdentifierNode, LiteralNode, ObjectTypeDefinitionNode, Root, TableColumnNode, TableColumnTypeNode, TableDefinitionNode, TreeNode, TypeDefinitionNode } from "../../types/ast.types";
+import type { Constraint, CreateTypeProcedureNode, EnumDefinitionNode, FieldTypeNode, IdentifierNode, ObjectTypeDefinitionNode, Root, TableColumnNode, TableDefinitionNode, TreeNode, TypeDefinitionNode } from "../../types/ast.types";
 
 class Parser {
   private tokens: Token[];
@@ -300,6 +300,7 @@ class Parser {
       case TokenIdentifiers.DOUBLE:
       case TokenIdentifiers.UUID:
       case TokenIdentifiers.INT:
+      case TokenIdentifiers.BOOLEAN:
       case TokenIdentifiers.BYTEA:
       this.eat();        
       return tableColType;
