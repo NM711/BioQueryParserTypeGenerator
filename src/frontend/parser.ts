@@ -224,7 +224,7 @@ class Parser {
   private parseColumns(): TableColumnNode[] {
     const columns: TableColumnNode[] = [];
 
-    while (this.peek().id !== TokenIdentifiers.RIGHT_PARENTHESIS) {
+    while (true) {
       const colIdent = this.parsePrimary();
       this.expected(TokenIdentifiers.IDENT, "Identifier");
 
@@ -242,12 +242,14 @@ class Parser {
       while (this.peek().id !== TokenIdentifiers.RIGHT_PARENTHESIS && this.peek().id !== TokenIdentifiers.SEPERATOR) {
         column.constraints.push(this.parseColumnConstraints());
       };
-
-      if (this.peek().id == TokenIdentifiers.SEPERATOR) {
-        this.eat();
-      };
-
+      
       columns.push(column);
+
+      if (this.peek().id === TokenIdentifiers.RIGHT_PARENTHESIS) {
+        break;
+      } else {
+        this.expected(TokenIdentifiers.SEPERATOR, ",");
+      };
     };
 
     return columns;
@@ -322,17 +324,19 @@ class Parser {
 
     const values: TreeNode[] = [];
 
-    while (this.peek().id != TokenIdentifiers.RIGHT_PARENTHESIS) {
+    while (true) {
 
       values.push(this.parsePrimary());
       this.eat();
 
-      if (this.peek().id == TokenIdentifiers.SEPERATOR) {
+      if (this.peek().id === TokenIdentifiers.RIGHT_PARENTHESIS) {
         this.eat();
+        break;
+      } else {
+        this.expected(TokenIdentifiers.SEPERATOR, ",");
       };
+      
     };
-
-    this.eat();
 
     this.expected(TokenIdentifiers.SEMICOLON, ";");
     return {
@@ -347,7 +351,7 @@ class Parser {
 
     const fields: { name: IdentifierNode; type: FieldTypeNode }[] = [];
 
-    while (this.peek().id != TokenIdentifiers.RIGHT_PARENTHESIS) {
+    while (true) {
 
       const field = this.parsePrimary() as IdentifierNode;
 
@@ -359,9 +363,14 @@ class Parser {
         name: field,
         type: fieldType
       });
-    };
 
-    this.eat();
+      if (this.peek().id === TokenIdentifiers.RIGHT_PARENTHESIS) {
+        this.eat();
+        break;
+      } else {
+        this.expected(TokenIdentifiers.SEPERATOR, ",");
+      };
+    };
 
     this.expected(TokenIdentifiers.SEMICOLON, ";");
 
@@ -459,10 +468,7 @@ class Parser {
     const root: Root = {
       kind: "ROOT",
       body: []
-    }
-    
-
-    console.log(this.tokens)
+    };
 
     try {
       while (this.tokens.length > 0) {
@@ -471,7 +477,6 @@ class Parser {
 
       return root;
     } catch (e) {
-      console.log(root.body);
 
       if (e instanceof SyntaxError) {
        console.error(e.stack)

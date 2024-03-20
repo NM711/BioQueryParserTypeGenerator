@@ -1,4 +1,4 @@
-import type { DefaultConstraint, ProcedureCallNode, Root, TableDefinitionNode, TreeNode, TypeDefinitionNode } from "../../types/ast.types";
+import type { LiteralNode, ProcedureCallNode, Root, TableDefinitionNode, TreeNode, TypeDefinitionNode } from "../../types/ast.types";
 import type { DataTypeNode, InterfaceFieldNode, TransformNode, TransformRoot } from "../../types/transformer.ast.types";
 
 /**
@@ -6,13 +6,17 @@ import type { DataTypeNode, InterfaceFieldNode, TransformNode, TransformRoot } f
 */
 
 class Transformer {
-
+  private mode: "KYSLEY" | "DEFAULT";
   private source: Root;
   
    constructor() {};
 
   public set setSource(source: Root) {
     this.source = source;
+  };
+
+  public set setMode(mode: "KYSLEY" | "DEFAULT") {
+    this.mode = mode;
   };
 
   private transformType(t: string): string {
@@ -65,6 +69,28 @@ class Transformer {
     };
   };
 
+  private processLiteral(literal: LiteralNode): DataTypeNode {
+
+    const t: DataTypeNode = this.generateDataTypeNode;
+
+    t.type = literal.value;
+        
+    switch (literal.type) {
+      case "STRING":
+        t.variant = "string_literal";
+      break;
+              
+      case "NUMBER":
+        t.variant = "number_literal";
+      break;
+              
+      default:
+        t.variant = "literal";
+    };
+
+  return t;
+};
+  
   private transformTypeDeclaration(declaration: TypeDefinitionNode): TransformNode {
     switch (declaration.kind) {
       case "ENUM":
@@ -72,13 +98,7 @@ class Transformer {
         const dataTypes: DataTypeNode[] = [];
 
         for (const value of declaration.values) {
-          
-          const typeInfo = this.generateDataTypeNode;
-          
-          if (value.kind === "LITERAL") {
-            typeInfo.type = value.type;
-            typeInfo.variant = "custom";         
-          };
+          const typeInfo = this.processLiteral(value as LiteralNode);
 
           dataTypes.push(typeInfo);
         };
@@ -101,7 +121,7 @@ class Transformer {
           const field: InterfaceFieldNode = this.generateInterfaceFieldNode;
           field.ident = f.name.name;
           field.strict = true;
-          field.typeInfo.type = f.type.name;
+          field.typeInfo.type = this.transformType(f.type.name);
           objectTypeFields.push(field);
         };
         
@@ -121,24 +141,24 @@ class Transformer {
       const field: InterfaceFieldNode = this.generateInterfaceFieldNode;
 
       field.ident = column.name.name;
-      
-      if (column.constraints["NOT NULL"] || column.constraints["PRIMARY KEY"]) {
-        field.strict = true;
-      } else if (column.constraints["DEFAULT"]) {
-        const defaulted = column.constraints["DEFAULT"] as DefaultConstraint;
 
-          if (defaulted.value.kind === "LITERAL") {
-            field.typeInfo.variant = "literal";
-            field.typeInfo.type = defaulted.value.value;
-          } else if (defaulted.value.kind === "IDENTIFIER") {
-            field.typeInfo.variant = "custom";
-            field.typeInfo.type = defaulted.value.name;
-          };
-        continue;
+      for (const constraint of column.constraints) {
+
+        const strictAttributes = new Set(["NOT NULL", "PRIMARY KEY", "UNIQUE"]);
+
+        if (strictAttributes.has(constraint.name)) {
+          field.strict = true;
+        };
       };
-
-      field.typeInfo.type = this.transformType(column.type.name);
     
+      const typeName = this.transformType(column.type.name);
+
+      field.typeInfo.type = typeName;
+      
+      if (this.mode === "KYSLEY") {
+        field.typeInfo.type = `Generated<${typeName}>`;
+      };
+      
       fields.push(field);
     };
 
@@ -197,17 +217,12 @@ class Transformer {
         if (e instanceof Error) {
           console.log(e.stack);
 
-          console.log(transformed);
           process.exit(1);
         };
     };
-
-    // console.log(transformed);
  
     return transformed;
   };
-  
 };
-
 
 export default Transformer;

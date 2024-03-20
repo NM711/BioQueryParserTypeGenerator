@@ -1,8 +1,26 @@
 {
+  "name": "psql-schema-ts-compiler",
+  "author": "NM711",
+  "version": "1.0.0",
+  "liscense": "MIT",
+  "main": "./build/index.js",
+  "description": "A simple sql schema to typescript types compiler!",
   "scripts": {
-    "test#1": "cd $(pwd)/test/test#1 && npx tsx ./test.ts"
+    "test#1": "cd $(pwd)/test/test#1 && npx tsx ./test.ts -p ./test.sql"
   },
-
+  "bin": {
+    "compile": "./build/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NM711/psql-schema-ts-compiler"
+  },
+  "keywords": [
+    "typescript",
+    "javascript",
+    "sql",
+    "postgresql"
+  ],
   "dependencies": {
     "@types/node": "^20.11.24"
   }

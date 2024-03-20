@@ -1,5 +1,4 @@
-export type BasicTypes = "void" | "any" | "number" | "string" | "boolean" | "object" | "unknown" | "null" | "undefined";
-type DataVariants =  "custom" | "array" | "literal" | "none";
+type DataVariants =  "custom" | "array" | "number_literal" | "string_literal" | "literal" | "none";
 
 export type Type<T> = T;
 

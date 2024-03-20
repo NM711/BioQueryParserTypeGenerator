@@ -1,21 +1,40 @@
 import fs from "node:fs";
-import type { InterfaceNode, TransformNode, TransformRoot, TypeNode } from "../../types/transformer.ast.types"
+import type { DataTypeNode, InterfaceNode, TransformNode, TransformRoot, TypeNode } from "../../types/transformer.ast.types"
 
 /**
   Reads the Typescript AST then, outputs valid typescript files with the Schemas structure in type format.
 **/
 
-type s = 
-  string |
-  number 
-
 class Compiler {
   private root: TransformRoot;
   private outputString: string;
+  private mode: "DEFAULT" | "KYSLEY"
   
   public set setRoot(root: TransformRoot) {
     this.root = root;
+    this.mode = "DEFAULT";
     this.outputString = "";
+  };
+
+  public set setMode(mode: "DEFAULT" | "KYSLEY") {
+    this.mode = mode;
+  };
+
+  private compileDataType(info: DataTypeNode): string {
+
+    switch (info.variant) {
+      case "custom":
+      case "none":
+      case "number_literal":
+      case "literal":
+      return info.type;
+      
+      case "string_literal":
+      return `"${info.type}"`;
+
+      case "array":
+      return `${info.type}[]`;
+    };
   };
 
 
@@ -24,7 +43,7 @@ class Compiler {
     for (const field of type.fields) {
       this.outputString += `\n\t${field.ident}`;
 
-      if (field.strict) {
+      if (!field.strict) {
         this.outputString += "?"
       };
 
@@ -33,20 +52,8 @@ class Compiler {
       // Something to notice and to fix here is that, fields can only contain a single type value.
       // Each field should be able to have an "n" amount of type values.
       
-      switch (field.typeInfo.variant) {
-         case "custom":
-         case "none":
-          this.outputString += `${field.typeInfo.type};`
-         break; 
-         
-         case "literal":
-            // this only works with string at the moment, I need to fix this within the transformer.
-           this.outputString += `"${field.typeInfo.type}";`
-         break;
-         case "array":
-          this.outputString += `${field.typeInfo.type}[];`;
-         break
-      };
+      this.outputString += this.compileDataType(field.typeInfo);
+      this.outputString += ";";
     };
      this.outputString += "\n};\n\n";
   };
@@ -58,7 +65,9 @@ class Compiler {
 
       for (let i = 0; i < type.values.length; ++i) {
         const value = type.values[i];
-        this.outputString += `\n\t${value.type} `;
+        this.outputString += `\n\t`;
+        this.outputString += this.compileDataType(value);
+        this.outputString += " ";
         
         if (i !== type.values.length - 1) {
           this.outputString += "|"          
@@ -88,6 +97,11 @@ class Compiler {
   };
 
   public execute(): void {
+
+    if (this.mode === "KYSLEY") {
+      this.outputString += "import type { Generated } from \"kysley\";\n\n";
+    };
+    
     for (const node of this.root.body) {
       this.compile(node);
     };
